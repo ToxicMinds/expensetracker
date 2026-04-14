@@ -16,7 +16,10 @@ function dbg(msg, objPayload, isApiTrace = false) {
   var tracePrefix = isApiTrace ? '[API] ' : '';
   var textBody = new Date().toTimeString().slice(0,8) + ' ' + tracePrefix + msg;
   
-  if (objPayload && typeof objPayload === 'object' && Object.keys(objPayload).length > 0) {
+  if (objPayload instanceof Error) {
+    textBody += '\n  Error: ' + objPayload.message;
+    if (objPayload.stack) textBody += '\n  Stack: ' + objPayload.stack.split('\n').slice(0,2).join('\n');
+  } else if (objPayload && typeof objPayload === 'object' && Object.keys(objPayload).length > 0) {
     try {
       textBody += '\n  Payload: ' + JSON.stringify(objPayload).slice(0, 150) + '...';
     } catch(e) {}
@@ -141,11 +144,14 @@ async function categoriseWithGroq(ekasaData, receiptId) {
         else throw ep;
       }
     }
-    var catsArray = parsed.items || parsed;
-    if (!Array.isArray(catsArray)) { catsArray = Object.values(parsed)[0]; }
+    var catsArray = parsed.items || (Array.isArray(parsed) ? parsed : null);
+    if (!catsArray) {
+      var vals = Object.values(parsed);
+      catsArray = Array.isArray(vals[0]) ? vals[0] : [];
+    }
 
     var catMap = {};
-    catsArray.forEach(function(c){catMap[c.idx]=c.category;});
+    catsArray.forEach(function(c){ if(c && c.idx) catMap[c.idx]=c.category; });
 
     var result = items.map(function(it, i) {
       var name  = it.name || it.itemName || it.description || it.text || ('Item '+(i+1));

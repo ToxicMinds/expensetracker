@@ -26,13 +26,15 @@ export default async function handler(req, res) {
   }
 
   try {
+    const requestBody = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
       },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(requestBody)
     });
     
     // We send back raw text/JSON depending on response
