@@ -209,6 +209,7 @@ function openSettings() {
   document.getElementById('settings-modal')?.classList.add('open');
   applyNamesUI();
   renderSettingsRules();
+  renderBudgetsGrid();
 }
 
 function closeSettings() {
@@ -230,7 +231,9 @@ function closeScanner() {
 
 function showStep(id) {
   document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
-  document.getElementById(id).classList.add('active');
+  var el = document.getElementById(id);
+  if (el) el.classList.add('active');
+  else dbg('UI Warning: step not found: '+id, true);
 }
 
 function showEkasaStatus(type, title, desc) {
@@ -316,7 +319,7 @@ function renderBudgetsGrid() {
   if(!grid) return;
   grid.innerHTML = '';
   CATS.forEach(function(c, idx) {
-    grid.innerHTML += '<div class="fg" style="margin-bottom:0"><div class="fl" style="display:flex;justify-content:space-between"><span>'+esc(c)+' (€)</span><button onclick="delCategory('+idx+')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1">&#x2715;</button></div><input type="number" id="set-b-'+idx+'" value="'+(BUDGETS[c]||0)+'" min="0" step="1" data-cat="'+esc(c)+'"></div>';
+    grid.innerHTML += '<div class="fg" style="margin-bottom:0"><div class="fl" style="display:flex;justify-content:space-between"><span>'+esc(c)+' (€)</span><button onclick="delCategory(\''+esc(c)+'\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1">&#x2715;</button></div><input type="number" id="set-b-'+idx+'" value="'+(BUDGETS[c]||0)+'" min="0" step="1" data-cat="'+esc(c)+'"></div>';
   });
 }
 

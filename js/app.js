@@ -300,11 +300,10 @@ function addCategoryUI() {
   }
 }
 
-function delCategory(idx) {
-  var c = CATS[idx];
-  if(!confirm('Remove category "'+c+'"?')) return;
-  CATS.splice(idx,1);
-  delete BUDGETS[c];
+function delCategory(catName) {
+  if(!confirm('Remove category "'+catName+'"?')) return;
+  CATS = CATS.filter(function(c){ return c !== catName; });
+  delete BUDGETS[catName];
   renderBudgetsGrid();
 }
 
