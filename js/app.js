@@ -1,0 +1,472 @@
+/* ═══════════════════════════════════════════════
+   MAIN APP INSTANCE & BINDINGS
+═══════════════════════════════════════════════ */
+
+async function init() {
+  setSyncing('s');
+  try {
+    var cState = await sbLoadState();
+    if(cState) {
+      NAMES   = cState.names   || NAMES;
+      INCOME  = cState.income  || INCOME;
+      BUDGETS = cState.budgets || BUDGETS;
+      MEMORY  = cState.memory  || MEMORY;
+      RULES   = cState.rules   || RULES;
+      GOALS   = cState.goals   || GOALS;
+      BANKS   = cState.banks   || BANKS;
+      CATS = Object.keys(BUDGETS);
+      TOTAL_B = CATS.reduce(function(s,k){return s+Number(BUDGETS[k])},0);
+      localStorage.setItem('sf_names',   JSON.stringify(NAMES));
+      localStorage.setItem('sf_income',  JSON.stringify(INCOME));
+      localStorage.setItem('sf_budgets', JSON.stringify(BUDGETS));
+      localStorage.setItem('sf_memory',  JSON.stringify(MEMORY));
+      localStorage.setItem('sf_rules',   JSON.stringify(RULES));
+      localStorage.setItem('sf_goals',   JSON.stringify(GOALS));
+      localStorage.setItem('sf_banks',   JSON.stringify(BANKS));
+      applyNamesUI(); applyCatsUI();
+    }
+    expenses = await sbSelect();
+    dbg('Loaded '+expenses.length+' rows');
+    setSyncing('ok');
+  } catch(e) {
+    setSyncing('e');
+    dbg('INIT: '+e.message, e, true);
+    document.getElementById('cards').innerHTML =
+      '<div class="card" style="grid-column:1/-1"><div class="cl" style="color:var(--danger)">Connection error</div>'+
+      '<div style="font-size:13px;margin-top:6px">'+esc(e.message)+'</div></div>';
+    toggleDbg();
+  }
+  
+  if (document.getElementById('fdate')) {
+    document.getElementById('fdate').value = today();
+    document.getElementById('sdate').value = today();
+  }
+  
+  initMonths();
+  renderAll();
+
+  /* Handle Nordigen OAuth callback (?ref=requisition_id) */
+  var urlParams = new URLSearchParams(window.location.search);
+  var nordRef = urlParams.get('ref');
+  if(nordRef) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    handleNordigenCallback(nordRef);
+  }
+
+  setInterval(async function(){
+    if(busy) return;
+    try{
+      var r=await sbSelect();
+      var s=await sbLoadState();
+      if(s) {
+        var changed = (
+          JSON.stringify(s.budgets) !== JSON.stringify(BUDGETS) ||
+          JSON.stringify(s.names)   !== JSON.stringify(NAMES)   ||
+          JSON.stringify(s.income)  !== JSON.stringify(INCOME)  ||
+          JSON.stringify(s.memory)  !== JSON.stringify(MEMORY)  ||
+          JSON.stringify(s.rules)   !== JSON.stringify(RULES)   ||
+          JSON.stringify(s.goals)   !== JSON.stringify(GOALS)   ||
+          JSON.stringify(s.banks)   !== JSON.stringify(BANKS)
+        );
+        if(changed) {
+          NAMES=s.names||NAMES; INCOME=s.income||INCOME; BUDGETS=s.budgets||BUDGETS;
+          MEMORY=s.memory||MEMORY; RULES=s.rules||RULES; GOALS=s.goals||GOALS; BANKS=s.banks||BANKS;
+          CATS=Object.keys(BUDGETS); TOTAL_B=CATS.reduce(function(a,k){return a+Number(BUDGETS[k])},0);
+          applyNamesUI(); applyCatsUI(); renderAll();
+        }
+      }
+      if(JSON.stringify(r)!==JSON.stringify(expenses)){expenses=r;initMonths();renderAll();}
+    }catch(e){}
+  }, 30000);
+}
+
+function uid() { return 'ex_'+Date.now().toString(36)+Math.random().toString(36).substr(2,5); }
+
+/* ═══════════════════════════════════════════════
+   EXPENSE MANAGEMENT
+═══════════════════════════════════════════════ */
+async function addExpense() {
+  if(busy) return;
+  var date=document.getElementById('fdate').value;
+  var amt=parseFloat(document.getElementById('famt').value);
+  var cat=document.getElementById('fcat').value;
+  var desc=document.getElementById('fdesc').value.trim();
+  
+  /* FIXED: Allow negative numbers for refunds! Removes 'amt<=0' constraint */
+  if(!date || isNaN(amt)){flash('Please enter a date and amount.',true);return;}
+  
+  busy=true;
+  var btn=document.getElementById('addbtn');
+  btn.disabled=true; btn.textContent='Saving…'; setSyncing('s');
+  
+  if (editingId) {
+    var row = {who:who, date:date, category:cat, amount:amt, description:desc};
+    try {
+      await sbUpdate(editingId, row);
+      var idx = expenses.findIndex(e => e.id === editingId);
+      if(idx>=0) {
+        expenses[idx] = Object.assign({}, expenses[idx], row);
+      }
+      cancelEdit();
+      initMonths(); renderAll(); flash('Updated!', false); setSyncing('ok');
+    } catch(e) {
+      flash(e.message, true); setSyncing('e');
+    } finally {
+      busy=false; btn.disabled=false;
+    }
+  } else {
+    var row={id:uid(),who:who,date:date,category:cat,amount:amt,description:desc};
+    try {
+      await sbInsert(row);
+      row.created_at=new Date().toISOString();
+      expenses.unshift(row);
+      document.getElementById('famt').value='';
+      document.getElementById('fdesc').value='';
+      initMonths(); document.getElementById('msel').value=date.slice(0,7);
+      renderAll(); flash('Saved!',false); setSyncing('ok');
+    } catch(e){flash(e.message,true);setSyncing('e');}
+    finally{busy=false;btn.disabled=false;btn.textContent='Add expense';}
+  }
+}
+
+function startEdit(id) {
+  var e = expenses.find(x => x.id === id);
+  if (!e) return;
+  editingId = id;
+  setWho(e.who);
+  document.getElementById('fdate').value = e.date;
+  document.getElementById('famt').value = e.amount;
+  document.getElementById('fcat').value = e.category;
+  document.getElementById('fdesc').value = e.description;
+  document.getElementById('form-title').innerHTML = 'Edit expense <button class="btn-g" style="padding:2px 8px;font-size:11px" onclick="cancelEdit()">Cancel</button>';
+  document.getElementById('addbtn').textContent = 'Update expense';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelEdit() {
+  editingId = null;
+  document.getElementById('famt').value = '';
+  document.getElementById('fdesc').value = '';
+  document.getElementById('form-title').textContent = 'Add expense';
+  document.getElementById('addbtn').textContent = 'Add expense';
+}
+
+async function deleteExp(id) {
+  if (editingId === id) cancelEdit();
+  if(busy){alert('Another operation is running.');return;}
+  busy=true; setSyncing('s');
+  var backup=expenses.slice();
+  expenses=expenses.filter(function(e){return e.id!==id;});
+  renderAll();
+  try{await sbDelete(id);setSyncing('ok');}
+  catch(e){expenses=backup;renderAll();setSyncing('e');alert('Delete failed.\n\n'+e.message);}
+  finally{busy=false;}
+}
+
+/* ═══════════════════════════════════════════════
+   SMART RULES (Applied before AI)
+═══════════════════════════════════════════════ */
+function applySmartRules(text) {
+  if(!text) return null;
+  var t = text.toLowerCase();
+  for (var i=0; i<RULES.length; i++) {
+    if (t.indexOf(RULES[i].pattern.toLowerCase()) > -1) {
+      return RULES[i].category;
+    }
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════
+   RECEIPT IMPORT LOGIC
+═══════════════════════════════════════════════ */
+async function startEkasaLookup(receiptId) {
+  showStep('step-ekasa');
+  showEkasaStatus('info', 'Searching Slovak eKasa database', 'Receipt ID: '+receiptId);
+
+  try {
+    var rawData = await getEkasaData(receiptId);
+    showEkasaStatus('success', 'Found receipt in eKasa database', 'Analysing items using AI...');
+    await categoriseWithGroq(rawData, receiptId);
+  } catch(e) {
+    showEkasaStatus('error', 'eKasa fetch failed', esc(e.message) + ' — Are you sure this is a valid SK fiscal receipt?');
+  }
+}
+
+function handleQRData(raw) {
+  dbg('QR raw: '+raw.slice(0,120));
+  var receiptId = null;
+  try {
+    var u = new URL(raw);
+    receiptId = u.searchParams.get('id');
+  } catch(e){}
+  
+  if (!receiptId) {
+    var m = raw.match(/O-[0-9A-F]{32}/i);
+    if(m) receiptId = m[0];
+  }
+  
+  if (receiptId) {
+    showStep('step-ekasa');
+    startEkasaLookup(receiptId);
+  } else {
+    showStep('step-ekasa');
+    showEkasaStatus('error', 'Unrecognised QR code format', 'This does not appear to be a Slovak eKasa receipt.');
+  }
+}
+
+async function handlePhotoUpload(el) {
+  var f = el.files[0];
+  if(!f) return;
+  el.value='';
+  showStep('step-ekasa');
+  showEkasaStatus('info','Reading photo…','Compressing image for AI processing');
+  
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function() {
+      var maxW=1024, maxH=1024;
+      var w=img.width, h=img.height;
+      if (w>maxW || h>maxH) {
+        var r = Math.min(maxW/w, maxH/h);
+        w=Math.floor(w*r); h=Math.floor(h*r);
+      }
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      var b64=c.toDataURL('image/jpeg', 0.85).split(',')[1];
+      categoriseImage(b64, 'image/jpeg');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+async function confirmReview() {
+  if(busy) return;
+  var items = document.querySelectorAll('.pitem');
+  var dateStr = document.getElementById('rev-date').value || today();
+  
+  var addedCount = 0;
+  busy = true; setSyncing('s');
+  
+  try {
+    for (var i=0; i<items.length; i++) {
+      var cb = document.getElementById('rcb_'+i);
+      if(cb && cb.checked) {
+        var amt = parseFloat(document.getElementById('ramt_'+i).value);
+        var cat = document.getElementById('rcat_'+i).value;
+        var nm  = document.getElementById('rnm_'+i).value;
+        if(isNaN(amt)||!nm) continue;
+        
+        var row = {id:uid(), who:swho, date:dateStr, category:cat, amount:amt, description:nm};
+        await sbInsert(row);
+        row.created_at = new Date().toISOString();
+        expenses.unshift(row);
+        addedCount++;
+        
+        if (MEMORY[nm] !== cat) {
+          MEMORY[nm] = cat;
+          try { await sbSaveState(); } catch(e){}
+        }
+      }
+    }
+  } catch(e) {
+    flash('Partial failure: '+e.message, true);
+  } finally {
+    busy = false;
+    cancelReview();
+    if(addedCount>0) {
+      initMonths();
+      document.getElementById('msel').value = dateStr.slice(0,7);
+      renderAll();
+      flash('Saved '+addedCount+' item(s)!', false);
+      setSyncing('ok');
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   SETTINGS MANAGER & CUSTOM CATEGORIES
+═══════════════════════════════════════════════ */
+function addCategoryUI() {
+  var nc = prompt('Enter new category name:');
+  if(!nc || nc.trim()==='') return;
+  nc = nc.trim();
+  if(CATS.indexOf(nc)===-1) {
+    CATS.push(nc);
+    BUDGETS[nc] = 0;
+    renderBudgetsGrid();
+  }
+}
+
+function delCategory(idx) {
+  var c = CATS[idx];
+  if(!confirm('Remove category "'+c+'"?')) return;
+  CATS.splice(idx,1);
+  delete BUDGETS[c];
+  renderBudgetsGrid();
+}
+
+async function saveSettings() {
+  if(busy) return;
+  NAMES.u1 = document.getElementById('set-name-u1').value.trim() || 'Person 1';
+  NAMES.u2 = document.getElementById('set-name-u2').value.trim() || 'Person 2';
+  localStorage.setItem('sf_names', JSON.stringify(NAMES));
+
+  INCOME.u1 = Number(document.getElementById('set-inc-u1').value) || 0;
+  INCOME.u2 = Number(document.getElementById('set-inc-u2').value) || 0;
+  localStorage.setItem('sf_income', JSON.stringify(INCOME));
+  
+  var inputs = document.querySelectorAll('[id^=set-b-]');
+  inputs.forEach(function(inp) {
+    var c = inp.getAttribute('data-cat');
+    BUDGETS[c] = Number(inp.value) || 0;
+  });
+  localStorage.setItem('sf_budgets', JSON.stringify(BUDGETS));
+  
+  TOTAL_B = Object.keys(BUDGETS).reduce(function(s,k){return s+Number(BUDGETS[k])},0);
+  CATS = Object.keys(BUDGETS);
+  
+  closeSettings();
+  renderAll(); /* Refresh all cards and charts instantly */
+  applyNamesUI();
+  applyCatsUI();
+  
+  flash('Syncing config globally...', false);
+  try {
+    busy = true; setSyncing('s');
+    await sbSaveState();
+    flash('Settings synced to all devices.', false);
+    setSyncing('ok');
+  } catch(e) {
+    flash('Cloud sync failed - saved locally.', true);
+    setSyncing('e');
+  } finally {
+    busy = false;
+  }
+}
+
+function addRuleUI() {
+  var p = prompt('Enter a keyword / pattern that appears on receipts:');
+  if(!p || !p.trim()) return;
+  var cats = CATS.map(function(c, i){ return (i+1)+'. '+c; }).join('\n');
+  var idx = prompt('Choose category by number (1-'+CATS.length+'):\n'+cats);
+  if(!idx || isNaN(idx) || idx<1 || idx>CATS.length) return;
+  RULES.push({id: uid(), pattern: p.trim(), category: CATS[idx-1]});
+  localStorage.setItem('sf_rules', JSON.stringify(RULES));
+  renderSettingsRules();
+  sbSaveState().catch(function(){}); // Silent sync
+}
+
+function deleteRule(id) {
+  RULES = RULES.filter(function(r){return r.id !== id;});
+  localStorage.setItem('sf_rules', JSON.stringify(RULES));
+  renderSettingsRules();
+  sbSaveState().catch(function(){});
+}
+
+function saveGoal() {
+  var gn = document.getElementById('g-name').value.trim();
+  var gt = parseFloat(document.getElementById('g-target').value);
+  var gs = parseFloat(document.getElementById('g-saved').value) || 0;
+  var gd = document.getElementById('g-deadline').value;
+  if(!gn || !gt) { flash('Name and target amount required', true); return; }
+  
+  GOALS.push({id: uid(), name: gn, target: gt, saved: gs, deadline: gd});
+  localStorage.setItem('sf_goals', JSON.stringify(GOALS));
+  closeGoalModal();
+  renderGoals();
+  sbSaveState().catch(function(){});
+}
+
+function deleteGoal(id) {
+  if(!confirm('Delete this goal?')) return;
+  GOALS = GOALS.filter(function(g){return g.id !== id;});
+  localStorage.setItem('sf_goals', JSON.stringify(GOALS));
+  renderGoals();
+  sbSaveState().catch(function(){});
+}
+
+/* ═══════════════════════════════════════════════
+   QR CAMERA MECHANICS
+═══════════════════════════════════════════════ */
+function startQRCamera() {
+  stopQRCamera();
+  var video = document.getElementById('qr-video');
+  if (!video) return;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}})
+    .then(function(stream) {
+      qrStream = stream;
+      video.srcObject = stream;
+      video.play();
+      qrCanvas = document.createElement('canvas');
+      qrCtx    = qrCanvas.getContext('2d', {willReadFrequently:true});
+      qrInterval = setInterval(function() {
+        if (video.readyState < 4) return;
+        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+        qrCanvas.width  = video.videoWidth;
+        qrCanvas.height = video.videoHeight;
+        qrCtx.drawImage(video, 0, 0);
+        var data = qrCtx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+        if (typeof jsQR === 'undefined') { dbg('jsQR not loaded', true); return; }
+        var code = jsQR(data.data, data.width, data.height, {inversionAttempts:'attemptBoth'});
+        if (code && code.data) {
+          dbg('QR detected: ' + code.data.slice(0,80));
+          stopQRCamera();
+          handleQRData(code.data);
+        }
+      }, 300);
+    })
+    .catch(function(e) {
+      dbg('Camera error: '+e.message, true);
+      var w = document.getElementById('qr-wrap');
+      if(w) w.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:13px">Camera not available — use the upload option below.</div>';
+    });
+}
+
+function stopQRCamera() {
+  if(qrInterval){clearInterval(qrInterval);qrInterval=null;}
+  if(qrStream){qrStream.getTracks().forEach(function(t){t.stop();});qrStream=null;}
+}
+
+function scanQRFromImage(ev) {
+  var f = ev.target.files[0]; if(!f) return;
+  ev.target.value = ''; /* reset so same file can be re-selected */
+  stopQRCamera();
+  showStep('step-ekasa');
+  showEkasaStatus('info','Reading QR code…','Analysing image for a QR code');
+  var img = new Image();
+  var url = URL.createObjectURL(f);
+  img.onload = function() {
+    if(!qrCanvas){qrCanvas=document.createElement('canvas');}
+    if(!qrCtx){qrCtx=qrCanvas.getContext('2d',{willReadFrequently:true});}
+    qrCanvas.width=img.width; qrCanvas.height=img.height;
+    qrCtx.drawImage(img,0,0);
+    var data=qrCtx.getImageData(0,0,img.width,img.height);
+    URL.revokeObjectURL(url);
+    if(typeof jsQR==='undefined'){showEkasaStatus('error','jsQR library not loaded','Please refresh the page and try again.');return;}
+    var code=jsQR(data.data,data.width,data.height,{inversionAttempts:'attemptBoth'});
+    if(!code){
+      var s=document.createElement('canvas');
+      s.width=Math.floor(img.width/2); s.height=Math.floor(img.height/2);
+      s.getContext('2d').drawImage(img,0,0,s.width,s.height);
+      var d2=s.getContext('2d').getImageData(0,0,s.width,s.height);
+      code=jsQR(d2.data,d2.width,d2.height,{inversionAttempts:'attemptBoth'});
+    }
+    if(code && code.data){dbg('QR from image: '+code.data.slice(0,80));handleQRData(code.data);}
+    else {showEkasaStatus('error','No QR code found in image', 'Try a clearer, well-lit photo where the QR code fills most of the frame.');}
+  };
+  img.onerror=function(){ showEkasaStatus('error','Could not read image file','Please try a different photo.'); };
+  img.src=url;
+}
+
+function onManualPhoto(ev) {
+  handlePhotoUpload(ev.target);
+}
+
+function setSWho(w){
+  swho=w;
+  var sN = document.getElementById('sbn'); if(sN) sN.className='wbtn'+(w===NAMES.u1?' an':'');
+  var sZ = document.getElementById('sbz'); if(sZ) sZ.className='wbtn'+(w===NAMES.u2?' az':'');
+}
