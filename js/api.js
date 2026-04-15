@@ -434,8 +434,9 @@ async function syncBank(sessionId) {
   } catch(e) {
     dbg('Sync bank error', e, true);
     flash('Sync error: '+e.message, true);
+  } finally {
+    busy=false; setSyncing('ok');
   }
-  busy=false; setSyncing('ok');
 }
 
 /* ═══════════════════════════════════════════════

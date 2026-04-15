@@ -199,7 +199,7 @@ function showReview(store, dateStr, items, totalInput) {
       '</div>';
   }).join('');
 }
-function cancelReview() { showStep('step-qr'); startQRCamera(); }
+function cancelReview() { closeScanner(); }
 
 /* ═══════════════════════════════════════════════
    SETTINGS & MODALS
