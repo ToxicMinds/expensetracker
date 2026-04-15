@@ -323,6 +323,8 @@ function renderBudgetsGrid() {
   });
 }
 
+
+
 function openBankPicker() {
   document.getElementById('bank-picker-modal').classList.add('open');
   loadBanks();
