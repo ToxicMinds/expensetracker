@@ -245,7 +245,7 @@ async function handlePhotoUpload(el) {
 async function confirmReview() {
   if(busy) return;
   var items = document.querySelectorAll('.pitem');
-  var dateStr = document.getElementById('rev-date').value || today();
+  var dateStr = (document.getElementById('sdate') || {}).value || today();
   
   var addedCount = 0;
   busy = true; setSyncing('s');
