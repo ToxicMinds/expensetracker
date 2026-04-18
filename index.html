@@ -20,6 +20,8 @@
 
 <!-- jsQR: QR code decoder, ~60kb, no dependencies -->
 <script src="./jsqr.min.js"></script>
+<!-- Supabase SDK Authentication -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body style="-webkit-font-smoothing: antialiased;">
@@ -35,15 +37,33 @@
 <button id="dbgtog" onclick="toggleDbg()">dbg</button>
 <div id="dbgpanel"></div>
 
-<!-- ══ PIN LOCK MODAL ══ -->
-<div class="mbk" id="pin-modal" style="background:var(--bg); z-index:9999;">
+<!-- ══ AUTH MODAL ══ -->
+<div class="mbk" id="auth-modal" style="background:var(--bg); z-index:9999;">
   <div class="modal" style="max-width:320px; text-align:center;">
-    <div style="font-size:40px; margin-bottom:10px;">🔒</div>
-    <div class="mtitle">Private Access</div>
-    <div class="msub" style="margin-bottom:1.25rem">Enter PIN to unlock</div>
-    <input type="password" id="pin-input" style="text-align:center; letter-spacing:8px; font-size:24px; font-family:var(--mono); margin-bottom:0.5rem;" maxlength="4" placeholder="••••" onkeyup="if(event.key==='Enter')verifyAppPin()">
-    <div id="pin-error" style="color:var(--danger); font-size:12px; height:16px; margin-bottom:0.5rem;"></div>
-    <button class="btn btn-p" onclick="verifyAppPin()" style="margin-top:0">Unlock</button>
+    <div style="font-size:40px; margin-bottom:10px;">🛡️</div>
+    <div class="mtitle" style="margin-bottom:6px">ET Expense Tracker</div>
+    <div class="msub" style="margin-bottom:1.5rem">Log in to sync your household</div>
+    
+    <button class="btn btn-g" onclick="executeAuth('google')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; border:1px solid var(--border)">
+      <img src="https://www.google.com/favicon.ico" width="16" height="16">
+      Continue with Google
+    </button>
+
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+      <hr style="flex:1; border:none; border-top:1px solid var(--border)">
+      <span style="font-size:11px; color:var(--muted)">OR</span>
+      <hr style="flex:1; border:none; border-top:1px solid var(--border)">
+    </div>
+
+    <input type="text" id="auth-user" placeholder="Username / Household name" style="width:100%; text-align:center; font-size:16px; margin-bottom:0.5rem;">
+    <input type="password" id="auth-pass" placeholder="Password" style="width:100%; text-align:center; font-size:16px; margin-bottom:0.5rem;" onkeyup="if(event.key==='Enter')executeAuth('simple')">
+    <div id="auth-error" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:0.8rem;"></div>
+    
+    <button class="btn btn-p" onclick="executeAuth('simple')" style="width:100%; margin-top:0">Enter Household</button>
+    
+    <div style="margin-top:1.5em; font-size:11px; color:var(--muted); line-height:1.4">
+      Just use any name and pass to start.<br>First time? We'll create it automatically.
+    </div>
   </div>
 </div>
 
@@ -185,6 +205,13 @@
       </div>
       <button class="btn-g" id="btn-gcal-connect" style="font-size:12px; padding:6px 12px; border-radius:6px; cursor:pointer; border:1px solid var(--border);" onclick="connectGoogleCalendar()">Connect</button>
     </div>
+  </div>
+
+  <div class="cbar" style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px">
+    <div class="mtitle" style="font-size:14px">Integrations</div>
+    <button class="btn btn-g" id="btn-gcal-connect" onclick="connectGoogleCalendar()" style="width:100%; margin-top:10px">Connect Google Calendar</button>
+    <button class="btn btn-g" onclick="syncAllToGCal()" style="width:100%; margin-top:8px">🔄 Sync All Historical to Calendar</button>
+    <div id="gcal-status" style="font-size:11px; color:var(--muted); margin-top:4px; text-align:center"></div>
   </div>
 
   <div class="cbar">

@@ -469,14 +469,61 @@ function openBankPicker() {
 function connectGoogleCalendar() {
   window.location.href = '/api/google-calendar?action=auth';
 }
-
 function disconnectGoogleCalendar() {
-  if(!confirm('Disconnect Google Calendar?')) return;
+  if(!confirm('Disconnect Google Calendar? Sync will stop.')) return;
   GCAL.enabled = false;
   GCAL.token = null;
   localStorage.setItem('sf_gcal', JSON.stringify(GCAL));
-  sbSaveState().catch(()=>{});
+  sbSaveState().catch(function(){});
   renderIntegrations();
+}
+
+async function syncToGCal(expense) {
+  if (!GCAL || !GCAL.enabled || !GCAL.token) return;
+  
+  try {
+    const res = await fetch('/api/google-calendar?action=sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: GCAL.token, expense: expense })
+    });
+    const data = await res.json();
+    if (data.new_token) {
+       GCAL.token = data.new_token;
+       localStorage.setItem('sf_gcal', JSON.stringify(GCAL));
+       sbSaveState().catch(function(){});
+    }
+  } catch(e) {
+    console.error("GCal sync failed", e);
+  }
+}
+
+async function syncAllToGCal() {
+  if (!GCAL || !GCAL.enabled || !GCAL.token) {
+    flash("Connect Google Calendar first", true);
+    return;
+  }
+  
+  if (!confirm(`Sync all ${expenses.length} expenses to your calendar? (This will cause significant "clutter" as requested!)`)) return;
+  
+  const status = document.getElementById('gcal-status');
+  status.textContent = "Syncing... 0%";
+  
+  // Clone to avoid mutation during loop
+  const toSync = [...expenses];
+  let success = 0;
+  
+  for (let i = 0; i < toSync.length; i++) {
+    await syncToGCal(toSync[i]);
+    success++;
+    status.textContent = `Syncing... ${Math.round((success / toSync.length) * 100)}%`;
+    // Tiny delay to prevent browser locking
+    if (i % 5 === 0) await new Promise(r => setTimeout(r, 100));
+  }
+  
+  status.textContent = "Sync Complete!";
+  flash(`Successfully pushed ${success} items to Calendar`, false);
+  setTimeout(() => { status.textContent = ""; }, 5000);
 }
 
 function renderIntegrations() {
@@ -497,26 +544,69 @@ function renderIntegrations() {
 }
 
 /* ═══════════════════════════════════════════════
-   APP LOCK MECHANICS
+   AUTHENTICATION LOGIC
 ═══════════════════════════════════════════════ */
-var APP_PIN = '2026'; // Fast hardcoded PIN
-
-function verifyAppPin() {
-  var v = document.getElementById('pin-input').value;
-  var err = document.getElementById('pin-error');
-  if (v === APP_PIN) {
-    sessionStorage.setItem('sf_unlocked', '1');
-    document.getElementById('pin-modal').classList.remove('open');
-    err.textContent = '';
-  } else {
-    document.getElementById('pin-input').value = '';
-    err.textContent = 'Incorrect PIN';
+async function executeAuth(mode) {
+  var err = document.getElementById('auth-error');
+  var userInp = document.getElementById('auth-user')?.value?.trim();
+  var passInp = document.getElementById('auth-pass')?.value?.trim();
+  
+  if (mode === 'google') {
+    err.textContent = 'Redirecting to Google...';
+    try {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + window.location.pathname
+        }
+      });
+      if (error) throw error;
+    } catch(e) { err.textContent = e.message; }
+    return;
   }
-}
 
-function enforceAppLock() {
-  if (sessionStorage.getItem('sf_unlocked') !== '1') {
-    document.getElementById('pin-modal').classList.add('open');
+  // Simple Auth Mode
+  if (!userInp || !passInp) {
+    err.textContent = 'Enter both name and password';
+    return;
+  }
+  
+  // Bridge Username to Email
+  var email = userInp.includes('@') ? userInp : (userInp.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '@et-tracker.com');
+  
+  err.textContent = 'Connecting...';
+  try {
+    // 1. Try Login
+    var { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: passInp });
+    
+    // 2. If login fails (user not found), try Signup automatically
+    if (error) {
+      if (error.message.toLowerCase().indexOf('invalid login credentials') > -1) {
+        err.textContent = 'Creating new household...';
+        var { data: sData, error: sErr } = await supabaseClient.auth.signUp({ 
+          email: email, 
+          password: passInp,
+          options: {
+            data: { household_name: userInp }
+          }
+        });
+        if (sErr) throw sErr;
+        
+        // Supabase often requires confirmation by default unless disabled.
+        // We'll try to sign in again immediately in case confirmation is off.
+        var { data: reData, error: reErr } = await supabaseClient.auth.signInWithPassword({ email: email, password: passInp });
+        if (reErr) {
+           err.textContent = "Household created! Please check your email (if enabled) or try logging in again.";
+           return;
+        }
+      } else {
+        throw error;
+      }
+    }
+    
+    window.location.reload();
+  } catch (e) {
+    err.textContent = e.message || 'System error';
   }
 }
 

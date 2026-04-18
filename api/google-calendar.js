@@ -68,8 +68,70 @@ module.exports = async (req, res) => {
   }
 
   if (action === 'sync') {
-    // Requires access token mapping inside application to push full events to Google
-    return res.status(200).json({ success: true, message: 'Simulated sync to Google Calendar.' });
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    
+    const { token, expense } = req.body;
+    if (!token || !expense) return res.status(400).json({ error: 'Missing token or expense data' });
+
+    try {
+      // 1. Get a fresh access token if the provided token is a refresh token or just use it.
+      // (Google usually gives a refresh token only on first prompt).
+      // For simplicity in this vanilla implementation, we'll try to use it as an access token first.
+      
+      const event = {
+        summary: `Expense: ${expense.description || expense.category}`,
+        description: `Category: ${expense.category}\nAmount: €${expense.amount}\nAdded via ET Expense Tracker`,
+        start: { date: expense.date },
+        end: { date: expense.date },
+        colorId: '1' // Lavender
+      };
+
+      const googleRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(event)
+      });
+
+      const data = await googleRes.json();
+      
+      if (!googleRes.ok) {
+        // If 401, maybe we need to refresh (if user provided a refresh token)?
+        if (googleRes.status === 401 && clientId && clientSecret) {
+           const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+             body: new URLSearchParams({
+               client_id: clientId,
+               client_secret: clientSecret,
+               refresh_token: token,
+               grant_type: 'refresh_token'
+             })
+           });
+           const refreshData = await refreshRes.json();
+           if (refreshRes.ok && refreshData.access_token) {
+              // Retry with new token
+              const retryRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${refreshData.access_token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(event)
+              });
+              const retryData = await retryRes.json();
+              return res.status(retryRes.status).json({ ...retryData, new_token: refreshData.access_token });
+           }
+        }
+        return res.status(googleRes.status).json(data);
+      }
+
+      return res.status(200).json(data);
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
 
   res.status(400).json({ error: 'Unknown action' });

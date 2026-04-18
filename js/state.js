@@ -1,14 +1,33 @@
 /* ═══════════════════════════════════════════════
    CREDENTIALS & ENDPOINTS
 ═══════════════════════════════════════════════ */
-var SB_URL  = 'https://yleswxfenmuzmxeekxkg.supabase.co';
-var SB_KEY  = 'sb_publishable_qJGOiVaWDrd9Fq6EUJvGUg_a8VrWCUx';
-var GROQ    = '/api/groq';
+var SB_URL = '';
+var SB_KEY = '';
+var GROQ = '/api/groq';
 var ENABLE_BANKING = '/api/enablebanking';
-var REST    = SB_URL + '/rest/v1/expenses';
-var REST_INVOICES = SB_URL + '/rest/v1/invoices';
-var EKASA   = '/ekasa-proxy/receipt/find';
-var HOUSEHOLD_ID = localStorage.getItem('sf_household_id') || 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d';
+var REST = '';
+var REST_INVOICES = '';
+var EKASA = '/ekasa-proxy/receipt/find';
+var HOUSEHOLD_ID = '';
+var SESSION_JWT = null;
+var supabaseClient = null;
+
+async function sysBootSupabase() {
+  try {
+    const env = await fetch('/api/env').then(r => r.json());
+    SB_URL = env.SB_URL;
+    SB_KEY = env.SB_KEY;
+    REST = SB_URL + '/rest/v1/expenses';
+    REST_INVOICES = SB_URL + '/rest/v1/invoices';
+    if(window.supabase) {
+      supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+    }
+    return true;
+  } catch(e) {
+    console.error("Critical: SDK boot failed", e);
+    return false;
+  }
+}
 
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE DYNAMICS
@@ -48,7 +67,8 @@ var editingId   = null; /* Track if we are editing an entry */
    SUPABASE
 ═══════════════════════════════════════════════ */
 function sbH(extra) {
-  var h = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Accept':'application/json'};
+  var token = SESSION_JWT || SB_KEY;
+  var h = {'apikey':SB_KEY,'Authorization':'Bearer ' + token,'Content-Type':'application/json','Accept':'application/json'};
   if (extra) Object.keys(extra).forEach(function(k){h[k]=extra[k];});
   return h;
 }

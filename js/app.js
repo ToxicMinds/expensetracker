@@ -3,7 +3,45 @@
 ═══════════════════════════════════════════════ */
 
 async function init() {
-  enforceAppLock();
+  const booted = await sysBootSupabase();
+  if (!booted) {
+    flash("Connection Error. Please refresh.", true);
+    return;
+  }
+
+  // Handle Auth Session
+  if (supabaseClient) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    
+    if (!session) {
+      document.getElementById('auth-modal').classList.add('open');
+      document.getElementById('app').style.display = 'none';
+      return;
+    }
+
+    SESSION_JWT = session.access_token;
+    
+    // Fetch Household for this user
+    try {
+      const { data: userData, error: userError } = await supabaseClient
+        .from('app_users')
+        .select('household_id')
+        .eq('id', session.user.id)
+        .single();
+        
+      if (userError) throw userError;
+      if (userData && userData.household_id) {
+        HOUSEHOLD_ID = userData.household_id;
+      }
+    } catch (e) {
+      console.error("Household mapping failed", e);
+      // Fallback to a default if absolutely necessary, but usually auth handles it via triggers
+    }
+  }
+
+  document.getElementById('auth-modal').classList.remove('open');
+  document.getElementById('app').style.display = 'block';
+
   setSyncing('s');
   try {
     var cState = await sbLoadState();
@@ -125,6 +163,7 @@ async function addExpense() {
       }
       cancelEdit();
       initMonths(); renderAll(); flash('Updated!', false); setSyncing('ok');
+      await syncToGCal(row);
     } catch(e) {
       flash(e.message, true); setSyncing('e');
     } finally {
@@ -140,6 +179,7 @@ async function addExpense() {
       document.getElementById('fdesc').value='';
       initMonths(); document.getElementById('msel').value=date.slice(0,7);
       renderAll(); flash('Saved!',false); setSyncing('ok');
+      await syncToGCal(row);
     } catch(e){flash(e.message,true);setSyncing('e');}
     finally{busy=false;btn.disabled=false;btn.textContent='Add expense';}
   }
@@ -296,6 +336,7 @@ async function confirmReview() {
         row.created_at = new Date().toISOString();
         expenses.unshift(row);
         addedCount++;
+        await syncToGCal(row);
         
         if (MEMORY[nm] !== cat) {
           MEMORY[nm] = cat;
