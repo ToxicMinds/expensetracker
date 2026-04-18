@@ -209,21 +209,31 @@ async function renderCalendar() {
 }
 
 function showDayDetails(dateStr) {
-  // Simple prompt/alert for now
-  // Real implementation would render #calendar-details with child expenses
-  var exps = expenses.filter(e => e.date === dateStr && e.invoice_id);
-  if(exps.length===0) {
-    document.getElementById('calendar-details').innerHTML = '<div class="te">No invoice details for ' + dateStr + '</div>';
+  // Filter for all expenses on this date (manual or invoice-based)
+  var exps = expenses.filter(e => e.date === dateStr);
+  
+  if (exps.length === 0) {
+    document.getElementById('calendar-details').innerHTML = 
+      `<div class="te" style="padding:20px; color:var(--muted)">${t('No entries for')} ${fmtDate(dateStr)}</div>`;
     return;
   }
-  var html = '<div style="font-weight:500;margin-bottom:8px;">' + t('Details for') + ' ' + fmtDate(dateStr) + '</div>';
-  html += '<div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--r); padding:10px;">';
+
+  var html = `<div style="font-weight:600; font-size:15px; margin-bottom:12px; color:var(--text)">${t('Details for')} ${fmtDate(dateStr)}</div>`;
+  html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+  
   exps.forEach(e => {
-    html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding:4px 0;">';
-    html += '<span>' + esc(e.description||'Item') + '</span>';
-    html += '<span style="font-family:var(--mono);">€' + fmt(e.amount) + '</span>';
-    html += '</div>';
+    html += `
+      <div class="panel" style="padding:10px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-light); border:1px solid var(--border)">
+        <div>
+          <div style="font-weight:600; font-size:13px;">${esc(e.description || 'Expense')}</div>
+          <div style="font-size:10px; color:var(--muted); margin-top:2px;">
+            <span class="pill pc" style="padding:2px 6px">${esc(e.category)}</span> • ${esc(e.who)}
+          </div>
+        </div>
+        <div style="font-family:var(--mono); font-weight:700; color:var(--text)">€${fmt(e.amount)}</div>
+      </div>`;
   });
+  
   html += '</div>';
   document.getElementById('calendar-details').innerHTML = html;
 }

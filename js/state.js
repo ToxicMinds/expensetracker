@@ -125,7 +125,12 @@ const DICT = {
     '+ Connect Bank': '+ Pripojiť banku',
     'Connect professional banking feeds via Enable Banking (Supports Tatra Banka, VUB, SLSP, Revolut).': 'Pripojte profesionálne bankové kanály cez Enable Banking (Podporuje Tatra Banku, VÚB, SLSP, Revolut).',
     'Integrations': 'Integrácie',
-    '💡 Monthly Insights': '💡 Mesačné štatistiky'
+    '💡 Monthly Insights': '💡 Mesačné štatistiky',
+    'Details for': 'Podrobnosti pre',
+    'Target': 'Cieľ',
+    'Spent': 'Minuté',
+    'Income': 'Príjem',
+    'Current Month': 'Aktuálny mesiac'
   }
 };
 
