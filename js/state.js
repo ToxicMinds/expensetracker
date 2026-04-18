@@ -75,7 +75,7 @@ async function sbCreateInvoice(invoice) {
     body: JSON.stringify(invoice)
   });
   var data = await r.json();
-  if (!r.ok) throw new Error(data.error?.message || 'Invoice creation failed');
+  if (!r.ok) throw new Error(data.message || data.error?.message || 'Invoice creation failed');
   return data[0];
 }
 async function sbDelete(id) {
