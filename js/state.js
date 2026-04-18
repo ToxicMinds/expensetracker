@@ -172,8 +172,18 @@ async function sbSaveState() {
     memory: MEMORY, rules: RULES, goals: GOALS, banks: BANKS,
     gcal: GCAL
   };
-  var r = await fetch(SB_URL + '/rest/v1/app_state?id=eq.' + HOUSEHOLD_ID, {
-    method:'PATCH', headers:sbH({'Prefer':'return=minimal'}), body:JSON.stringify({config: configObj})
+  // Use POST with resolution=merge-duplicates for an UPSERT
+  var r = await fetch(SB_URL + '/rest/v1/app_state', {
+    method:'POST', 
+    headers:sbH({
+      'Prefer':'resolution=merge-duplicates',
+      'Content-Type': 'application/json'
+    }), 
+    body:JSON.stringify({id: HOUSEHOLD_ID, config: configObj})
   });
-  if(!r.ok) throw new Error('State sync failed');
+  if(!r.ok) {
+    var err = await r.text();
+    console.error("State save failed", err);
+    throw new Error('State sync failed');
+  }
 }

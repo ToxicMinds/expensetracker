@@ -678,17 +678,19 @@ async function finishOB() {
   localStorage.setItem('sf_names', JSON.stringify(NAMES));
   localStorage.setItem('sf_income', JSON.stringify(INCOME));
   
-  // 3. Sync to Supabase
+  // 3. Provision household FIRST to get the ID
   try {
+    const hname = document.getElementById('ob-hname').value || 'My Household';
+    await provisionHousehold(hname);
+    
+    // 4. Now that we have HOUSEHOLD_ID, save the state (names, etc)
     await sbSaveState();
-    // Also trigger household creation in DB if it's missing (provisioning)
-    await provisionHousehold(document.getElementById('ob-hname').value);
     
     document.getElementById('onboarding-modal').classList.remove('open');
     location.reload();
   } catch(e) {
     console.error("Onboarding sync failed", e);
-    alert("Onboarding failed to sync. Check console.");
+    alert("Onboarding failed to sync: " + e.message);
   }
 }
 
