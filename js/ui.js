@@ -222,8 +222,8 @@ function renderCards(){
   const sc = svgs < 0 ? 'bad' : 'good';
 
   let html = `
-    <div class="card"><div class="cl">Total spent</div><div class="cv">${fmt(tot)}</div><div class="cs">${pct}% of €${TOTAL_B} budget</div></div>
-    <div class="card"><div class="cl">Remaining</div><div class="cv ${rc}">${(rem < 0 ? '-' : '') + fmt(Math.abs(rem))}</div><div class="cs">${rem < 0 ? 'Over budget' : 'Left this month'}</div></div>
+    <div class="card"><div class="cl">${t('Total spent')}</div><div class="cv">${fmt(tot)}</div><div class="cs">${pct}% of €${TOTAL_B} budget</div></div>
+    <div class="card"><div class="cl">${t('Remaining')}</div><div class="cv ${rc}">${(rem < 0 ? '-' : '') + fmt(Math.abs(rem))}</div><div class="cs">${rem < 0 ? t('Over budget') : t('Left this month')}</div></div>
   `;
 
   userKeys.forEach((k, i) => {
@@ -236,7 +236,7 @@ function renderCards(){
       </div>`;
   });
 
-  html += `<div class="card"><div class="cl">Net Savings</div><div class="cv ${sc}">${(svgs < 0 ? '-' : '') + fmt(Math.abs(svgs))}</div><div class="cs">from €${totInc} income</div></div>`;
+  html += `<div class="card"><div class="cl">${t('Net Savings')}</div><div class="cv ${sc}">${(svgs < 0 ? '-' : '') + fmt(Math.abs(svgs))}</div><div class="cs">from €${totInc} income</div></div>`;
   
   document.getElementById('cards').innerHTML = html;
 
@@ -288,7 +288,14 @@ function updateCharts(userSpend, catTotals) {
         cutout: '70%'
       }]
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: { 
+        legend: { position: 'bottom' },
+        title: { display: true, text: t('Spent by User'), font: { size: 14 } }
+      } 
+    }
   });
 
   const catLabels = Object.keys(catTotals).filter(k => catTotals[k] > 0);
@@ -300,7 +307,7 @@ function updateCharts(userSpend, catTotals) {
     data: {
       labels: catLabels,
       datasets: [{
-        label: 'Spent',
+        label: t('Spent'),
         data: catData,
         backgroundColor: '#3b82f6',
         borderRadius: 4
@@ -809,12 +816,30 @@ function changeLanguage(val) {
 }
 
 function applyTranslations() {
-  // Update static labels
   const mappings = {
-    'lbl-auth-title': 'Login',
-    'lbl-continue-google': 'Continue with Google',
-    'lbl-btn-enter': 'Enter Household',
+    'lbl-auth-title': 'Login', // Title key
+    'lbl-auth-sub': 'Secure access to your household',
+    'lbl-family-passcode': '🔐 Family Passcode',
+    'lbl-btn-pin-enter': 'Unlock Household',
+    'lbl-auth-or-text': 'OR SIGN IN WITH',
+    'lbl-continue-google': 'Google Account',
+    'lbl-show-advanced': 'Advanced: Username & Password',
+    'lbl-btn-enter': 'Login',
     'lbl-set-lang': 'Language',
+    // Settings
+    'lbl-set-title': 'Financial Plan & Settings',
+    'lbl-set-sub': 'Update your monthly income and budget limits based on your financial plan.',
+    'lbl-set-members': 'Household Members',
+    'lbl-set-budgets': 'Monthly Budgets',
+    'lbl-btn-add-cat': '+ Add Custom',
+    'lbl-set-rules': 'Smart Rules',
+    'lbl-btn-add-rule': '+ Add Rule',
+    'lbl-set-rules-sub': 'Auto-categorize items matching a keyword. Applied before AI.',
+    'lbl-set-banks': 'Bank Connections (Enable Banking)',
+    'lbl-btn-connect-bank': '+ Connect Bank',
+    'lbl-set-banks-sub': 'Connect professional banking feeds via Enable Banking (Supports Tatra Banka, VUB, SLSP, Revolut).',
+    'lbl-set-integrations': 'Integrations',
+    'lbl-insights-title': '💡 Monthly Insights',
   };
   
   Object.keys(mappings).forEach(id => {
@@ -822,9 +847,16 @@ function applyTranslations() {
     if (el) el.textContent = t(mappings[id]);
   });
   
-  // placeholders
-  document.getElementById('auth-user').placeholder = t('Username / Household name');
-  document.getElementById('auth-pass').placeholder = t('Password');
+  // Placeholders
+  const user = document.getElementById('auth-user');
+  if (user) user.placeholder = t('Username / Household name');
+  const pass = document.getElementById('auth-pass');
+  if (pass) pass.placeholder = t('Password');
+  
+  // Filter Dropdown: Re-init to update 'All Members' etc
+  initMonths();
+  applyNamesUI(); 
+  applyCatsUI();
 }
 
 /* ═══════════════════════════════════════════════

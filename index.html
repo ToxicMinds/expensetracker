@@ -41,36 +41,37 @@
 <div class="mbk" id="auth-modal" style="background:var(--bg); z-index:9999;">
   <div class="modal" style="max-width:320px; text-align:center;">
     <div class="mtitle" style="margin-bottom:6px" id="lbl-auth-title">ET Expense Tracker</div>
-    <div class="msub" style="margin-bottom:1.5rem" id="lbl-auth-sub">Log in to sync your household</div>
+    <div class="msub" style="margin-bottom:1.5rem" id="lbl-auth-sub">Secure access to your household</div>
     
-    <!-- Legacy PIN Bridge -->
-    <div style="margin-bottom: 20px;">
-      <input type="password" id="auth-pin" placeholder="Enter PIN (e.g. 2026)" style="width:100%; text-align:center; letter-spacing:4px; font-size:20px; font-family:var(--mono); margin-bottom:8px;" maxlength="4" onkeyup="if(event.key==='Enter')executeAuth('pin')">
-      <button class="btn btn-p" onclick="executeAuth('pin')" style="width:100%; margin-top:0">Unlock with PIN</button>
+    <!-- Legacy PIN Bridge: NOW PRIMARY -->
+    <div style="background:var(--nikhil-light); border:1px solid var(--nikhil); border-radius:var(--r); padding:1.5rem 1rem; margin-bottom:20px;">
+      <div style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--nikhil); letter-spacing:0.1em; margin-bottom:12px;" id="lbl-family-passcode">🔐 Family Passcode</div>
+      <input type="password" id="auth-pin" placeholder="••••" style="width:100%; text-align:center; letter-spacing:8px; font-size:24px; font-family:var(--mono); margin-bottom:12px; border-color:var(--nikhil);" maxlength="4" onkeyup="if(event.key==='Enter')executeAuth('pin')">
+      <button class="btn btn-p" onclick="executeAuth('pin')" style="width:100%; margin-top:0; background:var(--nikhil)" id="lbl-btn-pin-enter">Unlock Household</button>
     </div>
 
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px">
       <hr style="flex:1; border:none; border-top:1px solid var(--border)">
-      <span style="font-size:11px; color:var(--muted)">OR</span>
+      <span style="font-size:11px; color:var(--muted)" id="lbl-auth-or-text">OR SIGN IN WITH</span>
       <hr style="flex:1; border:none; border-top:1px solid var(--border)">
     </div>
 
     <button class="btn btn-g" onclick="executeAuth('google')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; border:1px solid var(--border)">
       <img src="https://www.google.com/favicon.ico" width="16" height="16">
-      <span id="lbl-continue-google">Continue with Google</span>
+      <span id="lbl-continue-google">Google Account</span>
     </button>
 
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
-      <hr style="flex:1; border:none; border-top:1px solid var(--border)">
-      <span style="font-size:11px; color:var(--muted)">OR</span>
-      <hr style="flex:1; border:none; border-top:1px solid var(--border)">
+    <div style="margin-top:1.5rem">
+      <div style="font-size:11px; color:var(--muted); cursor:pointer; text-decoration:underline;" onclick="document.getElementById('simple-auth-section').style.display='block'; this.style.display='none'" id="lbl-show-advanced">Advanced: Username & Password</div>
+      
+      <div id="simple-auth-section" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border)">
+        <input type="text" id="auth-user" placeholder="Username" style="width:100\%; text-align:center; font-size:14px; margin-bottom:0.5rem;">
+        <input type="password" id="auth-pass" placeholder="Password" style="width:100\%; text-align:center; font-size:14px; margin-bottom:0.8rem;" onkeyup="if(event.key==='Enter')executeAuth('simple')">
+        <button class="btn btn-g" onclick="executeAuth('simple')" style="width:100\%; margin-top:0; font-size:13px" id="lbl-btn-enter">Login</button>
+      </div>
     </div>
-
-    <input type="text" id="auth-user" placeholder="Username / Household name" style="width:100%; text-align:center; font-size:16px; margin-bottom:0.5rem;">
-    <input type="password" id="auth-pass" placeholder="Password" style="width:100%; text-align:center; font-size:16px; margin-bottom:0.5rem;" onkeyup="if(event.key==='Enter')executeAuth('simple')">
-    <div id="auth-error" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:0.8rem;"></div>
     
-    <button class="btn btn-p" onclick="executeAuth('simple')" style="width:100%; margin-top:0" id="lbl-btn-enter">Enter Household</button>
+    <div id="auth-error" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:10px;"></div>
     
     <div style="margin-top:1.5em; font-size:11px; color:var(--muted); line-height:1.4" id="lbl-auth-footer">
       Just use any name and pass to start.<br>First time? We'll create it automatically.
@@ -202,11 +203,11 @@
 <div class="mbk" id="settings-modal">
 <div class="modal">
   <button class="mclose" onclick="closeSettings()">&#x2715;</button>
-  <div class="mtitle">Financial Plan & Settings</div>
-  <div class="msub">Update your monthly income and budget limits based on your financial plan.</div>
+  <div class="mtitle" id="lbl-set-title">Financial Plan & Settings</div>
+  <div class="msub" id="lbl-set-sub">Update your monthly income and budget limits based on your financial plan.</div>
   
   <div style="margin-bottom:1.5rem">
-    <div class="pgtitle">Household Members</div>
+    <div class="pgtitle" id="lbl-set-members">Household Members</div>
     <div id="set-members-grid" class="fg2">
       <!-- Generated dynamically in applyNamesUI -->
     </div>
@@ -214,33 +215,33 @@
 
   <div style="margin-bottom:1rem">
     <div class="pgtitle">
-      <span>Monthly Budgets</span>
-      <button class="btn-g" style="padding:2px 8px;font-size:11px" onclick="addCategoryUI()">+ Add Custom</button>
+      <span id="lbl-set-budgets">Monthly Budgets</span>
+      <button class="btn-g" id="lbl-btn-add-cat" style="padding:2px 8px;font-size:11px" onclick="addCategoryUI()">+ Add Custom</button>
     </div>
     <div class="fg2" id="set-budgets-grid"></div>
   </div>
 
   <div style="margin-bottom:1rem">
     <div class="pgtitle">
-      <span>Smart Rules</span>
-      <button class="btn-g" style="padding:2px 8px;font-size:11px" onclick="addRuleUI()">+ Add Rule</button>
+      <span id="lbl-set-rules">Smart Rules</span>
+      <button class="btn-g" id="lbl-btn-add-rule" style="padding:2px 8px;font-size:11px" onclick="addRuleUI()">+ Add Rule</button>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Auto-categorize items matching a keyword. Applied before AI.</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px" id="lbl-set-rules-sub">Auto-categorize items matching a keyword. Applied before AI.</div>
     <div id="set-rules-list"></div>
   </div>
 
   <div style="margin-bottom:1.5rem">
     <div class="pgtitle">
-      <span>Bank Connections (Enable Banking)</span>
-      <button class="btn-g" style="padding:2px 8px;font-size:11px" onclick="openBankPicker()">+ Connect Bank</button>
+      <span id="lbl-set-banks">Bank Connections (Enable Banking)</span>
+      <button class="btn-g" id="lbl-btn-connect-bank" style="padding:2px 8px;font-size:11px" onclick="openBankPicker()">+ Connect Bank</button>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Connect professional banking feeds via Enable Banking (Supports Tatra Banka, VUB, SLSP, Revolut).</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px" id="lbl-set-banks-sub">Connect professional banking feeds via Enable Banking (Supports Tatra Banka, VUB, SLSP, Revolut).</div>
     <div id="bank-connections-list"></div>
   </div>
 
   <div style="margin-bottom:1.5rem">
     <div class="pgtitle">
-      <span>Integrations</span>
+      <span id="lbl-set-integrations">Integrations</span>
     </div>
     <div style="display:flex; justify-content:space-between; align-items:center; border: 1px solid var(--border); padding: 10px; border-radius: var(--r);">
       <div>
@@ -392,7 +393,7 @@
 <div class="mbk" id="insights-modal">
 <div class="modal" style="max-width:640px">
   <button class="mclose" onclick="closeInsights()">&#x2715;</button>
-  <div class="mtitle">💡 Monthly Insights</div>
+  <div class="mtitle" id="lbl-insights-title">💡 Monthly Insights</div>
   <div class="msub" id="insights-month-label">Analysing this month&hellip;</div>
   <div id="insights-body" style="min-height:120px;display:flex;align-items:center;justify-content:center">
     <span class="spin spin-lg"></span>
