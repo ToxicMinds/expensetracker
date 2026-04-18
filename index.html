@@ -40,13 +40,24 @@
 <!-- ══ AUTH MODAL ══ -->
 <div class="mbk" id="auth-modal" style="background:var(--bg); z-index:9999;">
   <div class="modal" style="max-width:320px; text-align:center;">
-    <div style="font-size:40px; margin-bottom:10px;">🛡️</div>
-    <div class="mtitle" style="margin-bottom:6px">ET Expense Tracker</div>
-    <div class="msub" style="margin-bottom:1.5rem">Log in to sync your household</div>
+    <div class="mtitle" style="margin-bottom:6px" id="lbl-auth-title">ET Expense Tracker</div>
+    <div class="msub" style="margin-bottom:1.5rem" id="lbl-auth-sub">Log in to sync your household</div>
     
+    <!-- Legacy PIN Bridge -->
+    <div style="margin-bottom: 20px;">
+      <input type="password" id="auth-pin" placeholder="Enter PIN (e.g. 2026)" style="width:100%; text-align:center; letter-spacing:4px; font-size:20px; font-family:var(--mono); margin-bottom:8px;" maxlength="4" onkeyup="if(event.key==='Enter')executeAuth('pin')">
+      <button class="btn btn-p" onclick="executeAuth('pin')" style="width:100%; margin-top:0">Unlock with PIN</button>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px">
+      <hr style="flex:1; border:none; border-top:1px solid var(--border)">
+      <span style="font-size:11px; color:var(--muted)">OR</span>
+      <hr style="flex:1; border:none; border-top:1px solid var(--border)">
+    </div>
+
     <button class="btn btn-g" onclick="executeAuth('google')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; border:1px solid var(--border)">
       <img src="https://www.google.com/favicon.ico" width="16" height="16">
-      Continue with Google
+      <span id="lbl-continue-google">Continue with Google</span>
     </button>
 
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
@@ -59,10 +70,47 @@
     <input type="password" id="auth-pass" placeholder="Password" style="width:100%; text-align:center; font-size:16px; margin-bottom:0.5rem;" onkeyup="if(event.key==='Enter')executeAuth('simple')">
     <div id="auth-error" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:0.8rem;"></div>
     
-    <button class="btn btn-p" onclick="executeAuth('simple')" style="width:100%; margin-top:0">Enter Household</button>
+    <button class="btn btn-p" onclick="executeAuth('simple')" style="width:100%; margin-top:0" id="lbl-btn-enter">Enter Household</button>
     
-    <div style="margin-top:1.5em; font-size:11px; color:var(--muted); line-height:1.4">
+    <div style="margin-top:1.5em; font-size:11px; color:var(--muted); line-height:1.4" id="lbl-auth-footer">
       Just use any name and pass to start.<br>First time? We'll create it automatically.
+    </div>
+  </div>
+</div>
+
+<!-- ══ ONBOARDING MODAL ══ -->
+<div class="mbk" id="onboarding-modal" style="background:var(--bg); z-index:9998;">
+  <div class="modal" style="max-width:400px; text-align:center;">
+    <div id="ob-step-1" class="ob-step active">
+      <div style="font-size:40px; margin-bottom:10px;">🏠</div>
+      <div class="mtitle">Welcome!</div>
+      <div class="msub">Let's set up your new household.</div>
+      <input type="text" id="ob-hname" placeholder="Name your household (e.g. The Smiths)" style="width:100%; text-align:center; margin: 1.5rem 0">
+      <button class="btn btn-p" style="width:100%" onclick="nextOB(2)">Next: Members</button>
+    </div>
+
+    <div id="ob-step-2" class="ob-step" style="display:none">
+      <div style="font-size:40px; margin-bottom:10px;">👥</div>
+      <div class="mtitle">Family Members</div>
+      <div class="msub">Add who will be tracking expenses.</div>
+      <div id="ob-members-list" style="margin: 1.5rem 0; text-align:left; display:flex; flex-direction:column; gap:10px">
+        <div class="ob-member-row" style="display:flex; gap:10px">
+          <input type="text" class="ob-m-name" placeholder="Member Name" style="flex:1" value="You">
+        </div>
+      </div>
+      <button class="btn" style="width:100%; margin-bottom:10px; border:1px dashed var(--border)" onclick="addOBMember()">+ Add Member (Up to 4)</button>
+      <button class="btn btn-p" style="width:100%" onclick="nextOB(3)">Next: Language</button>
+    </div>
+
+    <div id="ob-step-3" class="ob-step" style="display:none">
+      <div style="font-size:40px; margin-bottom:10px;">🌐</div>
+      <div class="mtitle">Preferences</div>
+      <div class="msub">Choose your primary language.</div>
+      <select id="ob-lang" style="width:100%; margin: 1.5rem 0; padding:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text)">
+        <option value="en">English (Default)</option>
+        <option value="sk">Slovenčina (Slovak)</option>
+      </select>
+      <button class="btn btn-p" style="width:100%" onclick="finishOB()">Complete Setup</button>
     </div>
   </div>
 </div>
@@ -214,8 +262,12 @@
     <div id="gcal-status" style="font-size:11px; color:var(--muted); margin-top:4px; text-align:center"></div>
   </div>
 
-  <div class="cbar">
-    <button class="btn btn-p" onclick="saveSettings()" style="margin-top:0">Save Settings</button>
+  <div class="fg">
+    <div class="fl" id="lbl-set-lang">Language</div>
+    <select id="set-lang" onchange="changeLanguage(this.value)" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text)">
+      <option value="en">English</option>
+      <option value="sk">Slovenčina</option>
+    </select>
   </div>
 </div>
 </div>

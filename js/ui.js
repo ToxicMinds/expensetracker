@@ -549,7 +549,31 @@ async function executeAuth(mode) {
   var err = document.getElementById('auth-error');
   var userInp = document.getElementById('auth-user')?.value?.trim();
   var passInp = document.getElementById('auth-pass')?.value?.trim();
+  var pinInp = document.getElementById('auth-pin')?.value?.trim();
   
+  if (mode === 'pin') {
+    if (pinInp === '2026') {
+      err.style.color = 'var(--nikhil)';
+      err.textContent = 'Unlocking primary household...';
+      // Secret Bridge: Log in to the legacy account
+      try {
+        const { error } = await supabaseClient.auth.signInWithPassword({
+          email: 'legacy@et-tracker.com',
+          password: 'pass2026'
+        });
+        if (error) throw error;
+        window.location.reload();
+      } catch (e) {
+        err.style.color = 'var(--danger)';
+        err.textContent = 'Bridge failed: ' + e.message;
+      }
+    } else {
+      err.style.color = 'var(--danger)';
+      err.textContent = 'Incorrect PIN';
+    }
+    return;
+  }
+
   if (mode === 'google') {
     err.textContent = 'Redirecting to Google...';
     try {
@@ -591,11 +615,9 @@ async function executeAuth(mode) {
         });
         if (sErr) throw sErr;
         
-        // Supabase often requires confirmation by default unless disabled.
-        // We'll try to sign in again immediately in case confirmation is off.
         var { data: reData, error: reErr } = await supabaseClient.auth.signInWithPassword({ email: email, password: passInp });
         if (reErr) {
-           err.textContent = "Household created! Please check your email (if enabled) or try logging in again.";
+           err.textContent = "Household created! Please log in again.";
            return;
         }
       } else {
@@ -607,6 +629,119 @@ async function executeAuth(mode) {
   } catch (e) {
     err.textContent = e.message || 'System error';
   }
+}
+
+/* ═══════════════════════════════════════════════
+   ONBOARDING LOGIC
+═══════════════════════════════════════════════ */
+function nextOB(step) {
+  if (step === 2) {
+    const hname = document.getElementById('ob-hname').value.trim();
+    if (!hname) { alert('Please name your household first'); return; }
+  }
+  document.querySelectorAll('.ob-step').forEach(s => s.style.display = 'none');
+  document.getElementById('ob-step-' + step).style.display = 'block';
+}
+
+function addOBMember() {
+  const list = document.getElementById('ob-members-list');
+  const count = list.querySelectorAll('.ob-member-row').length;
+  if (count >= 4) return;
+  const div = document.createElement('div');
+  div.className = 'ob-member-row';
+  div.style.display = 'flex';
+  div.style.gap = '10px';
+  div.innerHTML = `<input type="text" class="ob-m-name" placeholder="Member Name" style="flex:1">`;
+  list.appendChild(div);
+}
+
+async function finishOB() {
+  setSyncing('s');
+  // 1. Collect names
+  const members = Array.from(document.querySelectorAll('.ob-m-name'))
+    .map(i => i.value.trim())
+    .filter(v => v !== '');
+  
+  var newNames = {};
+  var newInc = {};
+  members.forEach((m, idx) => {
+    newNames['u' + (idx+1)] = m;
+    newInc['u' + (idx+1)] = 1;
+  });
+  
+  NAMES = newNames;
+  INCOME = newInc;
+  LANG = document.getElementById('ob-lang').value;
+  localStorage.setItem('sf_lang', LANG);
+  
+  // 2. Save to localStorage temporarily
+  localStorage.setItem('sf_names', JSON.stringify(NAMES));
+  localStorage.setItem('sf_income', JSON.stringify(INCOME));
+  
+  // 3. Sync to Supabase
+  try {
+    await sbSaveState();
+    // Also trigger household creation in DB if it's missing (provisioning)
+    await provisionHousehold(document.getElementById('ob-hname').value);
+    
+    document.getElementById('onboarding-modal').classList.remove('open');
+    location.reload();
+  } catch(e) {
+    console.error("Onboarding sync failed", e);
+    alert("Onboarding failed to sync. Check console.");
+  }
+}
+
+async function provisionHousehold(name) {
+  // If the trigger failed, we manually create a household row and mapping
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return;
+    
+    // Check if mapping exists
+    const { data: map } = await supabaseClient.from('app_users').select('household_id').eq('id', session.user.id).single();
+    if (map) {
+      HOUSEHOLD_ID = map.household_id;
+      return; 
+    }
+
+    // Create fresh
+    const { data: hh, error: hErr } = await supabaseClient.from('households').insert({ name: name }).select().single();
+    if (hErr) throw hErr;
+    await supabaseClient.from('app_users').insert({ id: session.user.id, household_id: hh.id });
+    HOUSEHOLD_ID = hh.id;
+  } catch(e) {
+    console.error("Manual provisioning failed", e);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TRANSLATIONS
+═══════════════════════════════════════════════ */
+function changeLanguage(val) {
+  LANG = val;
+  localStorage.setItem('sf_lang', LANG);
+  applyTranslations();
+  render(); // Re-render charts/lists
+}
+
+function applyTranslations() {
+  // Update static labels
+  const mappings = {
+    'lbl-auth-title': 'Login',
+    'lbl-continue-google': 'Continue with Google',
+    'lbl-btn-enter': 'Enter Household',
+    'lbl-set-lang': 'Language',
+  };
+  
+  Object.keys(mappings).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(mappings[id]);
+  });
+  
+  // placeholders
+  document.getElementById('auth-user').placeholder = t('Username / Household name');
+  document.getElementById('auth-pass').placeholder = t('Password');
 }
 
 /* ═══════════════════════════════════════════════

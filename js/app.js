@@ -41,11 +41,12 @@ async function init() {
 
   document.getElementById('auth-modal').classList.remove('open');
   document.getElementById('app').style.display = 'block';
+  applyTranslations();
 
   setSyncing('s');
   try {
     var cState = await sbLoadState();
-    if(cState) {
+    if (cState) {
       NAMES   = cState.names   || NAMES;
       INCOME  = cState.income  || INCOME;
       BUDGETS = cState.budgets || BUDGETS;
@@ -65,7 +66,17 @@ async function init() {
       localStorage.setItem('sf_banks',   JSON.stringify(BANKS));
       localStorage.setItem('sf_gcal',    JSON.stringify(GCAL));
       applyNamesUI(); applyCatsUI();
+    } else {
+      // New Household -> Show Onboarding
+      document.getElementById('onboarding-modal').classList.add('open');
+      return; // Stop here, onboarding will finish and reload
     }
+
+    if (!HOUSEHOLD_ID) {
+      console.warn("No Household ID resolved.");
+      return;
+    }
+
     expenses = await sbSelect();
     dbg('Loaded '+expenses.length+' rows');
     setSyncing('ok');

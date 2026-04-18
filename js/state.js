@@ -11,6 +11,48 @@ var EKASA = '/ekasa-proxy/receipt/find';
 var HOUSEHOLD_ID = '';
 var SESSION_JWT = null;
 var supabaseClient = null;
+var LANG = localStorage.getItem('sf_lang') || 'en';
+
+const DICT = {
+  en: {
+    'Add expense': 'Add expense',
+    'Spent by User': 'Spent by User',
+    'Category Breakdown': 'Category Breakdown',
+    'Budget vs Actual': 'Budget vs Actual',
+    'Scan receipt': 'Scan receipt',
+    'Private Access': 'Private Access',
+    'Login': 'Login',
+    'Continue with Google': 'Continue with Google',
+    'Username / Household name': 'Username / Household name',
+    'Password': 'Password',
+    'Enter Household': 'Enter Household',
+    'New here?': 'New here?',
+    'Settings': 'Settings',
+    'Logout': 'Logout',
+    'Language': 'Language',
+  },
+  sk: {
+    'Add expense': 'Pridať výdavok',
+    'Spent by User': 'Utratené podľa užívateľa',
+    'Category Breakdown': 'Rozdelenie podľa kategórií',
+    'Budget vs Actual': 'Rozpočet vs Skutočnosť',
+    'Scan receipt': 'Naskenovať bloček',
+    'Private Access': 'Súkromný prístup',
+    'Login': 'Prihlásiť sa',
+    'Continue with Google': 'Pokračovať cez Google',
+    'Username / Household name': 'Meno užívateľa / Domácnosť',
+    'Password': 'Heslo',
+    'Enter Household': 'Vstúpiť do domácnosti',
+    'New here?': 'Prvýkrát tu?',
+    'Settings': 'Nastavenia',
+    'Logout': 'Odhlásiť sa',
+    'Language': 'Jazyk',
+  }
+};
+
+function t(key) {
+  return (DICT[LANG] && DICT[LANG][key]) || key;
+}
 
 async function sysBootSupabase() {
   try {
@@ -32,15 +74,14 @@ async function sysBootSupabase() {
 /* ═══════════════════════════════════════════════
    CONSTANTS & STATE DYNAMICS
 ═══════════════════════════════════════════════ */
-var defaultNames = {u1: 'Nikhil', u2: 'Zuzana'};
+var defaultNames = {u1: 'Person 1'};
 var NAMES = JSON.parse(localStorage.getItem('sf_names')) || defaultNames;
 
-var defaultBudgets = {Groceries:800,Clothing:150,Transport:280,Utilities:65,'Dining out':100,Health:10,Entertainment:500,Pets:50,Kids:50,Other:100};
+var defaultBudgets = {Groceries:500,Transport:100,Utilities:200,Dining:100,Other:100};
 var BUDGETS = JSON.parse(localStorage.getItem('sf_budgets')) || defaultBudgets;
 
-/* Legacy migrate: if their old income state had {Nikhil: 4200}, migrate to {u1: 4200} */
 var oldInc = JSON.parse(localStorage.getItem('sf_income'));
-var INCOME = oldInc ? (oldInc.Nikhil !== undefined ? {u1: oldInc.Nikhil, u2: oldInc.Zuzana} : oldInc) : {u1: 4200, u2: 1400};
+var INCOME = oldInc || {u1: 1};
 
 var TOTAL_B = Object.keys(BUDGETS).reduce(function(s,k){return s+Number(BUDGETS[k])},0);
 var CATS    = Object.keys(BUDGETS);
