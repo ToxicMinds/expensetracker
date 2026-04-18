@@ -661,18 +661,9 @@ async function executeAuth(mode) {
       try {
         const { error } = await supabaseClient.auth.signInWithPassword({
           email: 'legacy@et-tracker.com',
-          password: 'SecretPassword2026'
+          password: 'pass2026'
         });
-        if (error) {
-          // If the account doesn't exist yet, try to create it automatically with the PIN password
-          const { error: signUpErr } = await supabaseClient.auth.signUp({
-            email: 'legacy@et-tracker.com',
-            password: 'SecretPassword2026'
-          });
-          if (signUpErr) throw error; // Throw original login error if signup fails too
-          window.location.reload();
-          return;
-        }
+        if (error) throw error;
         window.location.reload();
       } catch (e) {
         err.style.color = 'var(--danger)';
