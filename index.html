@@ -157,10 +157,9 @@
 
     <div class="fg">
       <div class="fl">Who paid?</div>
-      <div class="wtog">
-        <button class="wbtn an" id="sbn" onclick="setSWho(NAMES.u1)">Person 1</button>
-        <button class="wbtn" id="sbz" onclick="setSWho(NAMES.u2)">Person 2</button>
-      </div>
+        <div class="wgroup" id="filter-user-toggles" style="margin-bottom:14px">
+          <!-- Generated dynamically -->
+        </div>
     </div>
     <div class="fg"><div class="fl">Date</div><input type="date" id="sdate"></div>
 
@@ -208,11 +207,8 @@
   
   <div style="margin-bottom:1.5rem">
     <div class="pgtitle">Household Members</div>
-    <div class="fg2">
-      <div class="fg"><div class="fl">Person 1 Name</div><input type="text" id="set-name-u1"></div>
-      <div class="fg"><div class="fl">Person 2 Name</div><input type="text" id="set-name-u2"></div>
-      <div class="fg"><div class="fl" id="lbl-inc-u1">Income (€)</div><input type="number" id="set-inc-u1" min="0" step="0.01"></div>
-      <div class="fg"><div class="fl" id="lbl-inc-u2">Income (€)</div><input type="number" id="set-inc-u2" min="0" step="0.01"></div>
+    <div id="set-members-grid" class="fg2">
+      <!-- Generated dynamically in applyNamesUI -->
     </div>
   </div>
 
@@ -264,10 +260,10 @@
 
   <div class="fg">
     <div class="fl" id="lbl-set-lang">Language</div>
-    <select id="set-lang" onchange="changeLanguage(this.value)" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text)">
-      <option value="en">English</option>
-      <option value="sk">Slovenčina</option>
-    </select>
+        <select id="fwho" onchange="setSWho(this.value)" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); margin-bottom:14px">
+          <option value="">All Members</option>
+          <!-- Options populated dynamically -->
+        </select>
   </div>
 </div>
 </div>
@@ -313,12 +309,11 @@
           <button class="btn-scan" onclick="openScanner()">&#x1F4F7; Scan receipt</button>
         </div>
         <div class="fg">
-          <div class="fl">Who</div>
-          <div class="wtog">
-            <button class="wbtn an" id="bn" onclick="setWho(NAMES.u1)">Person 1</button>
-            <button class="wbtn" id="bz" onclick="setWho(NAMES.u2)">Person 2</button>
+            <div class="pgtitle">Member</div>
+            <div class="wgroup" id="user-toggles-container">
+              <!-- Generated dynamically -->
+            </div>
           </div>
-        </div>
         <div class="fg2">
           <div class="fg"><div class="fl">Date</div><input type="date" id="fdate"></div>
           <div class="fg"><div class="fl">Amount (€)</div><input type="number" id="famt" step="0.01" placeholder="0.00"></div>

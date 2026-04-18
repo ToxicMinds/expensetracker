@@ -393,42 +393,28 @@ function delCategory(catName) {
 }
 
 async function saveSettings() {
-  if(busy) return;
-  NAMES.u1 = document.getElementById('set-name-u1').value.trim() || 'Person 1';
-  NAMES.u2 = document.getElementById('set-name-u2').value.trim() || 'Person 2';
-  localStorage.setItem('sf_names', JSON.stringify(NAMES));
-
-  INCOME.u1 = Number(document.getElementById('set-inc-u1').value) || 0;
-  INCOME.u2 = Number(document.getElementById('set-inc-u2').value) || 0;
-  localStorage.setItem('sf_income', JSON.stringify(INCOME));
-  
-  var inputs = document.querySelectorAll('[id^=set-b-]');
-  inputs.forEach(function(inp) {
-    var c = inp.getAttribute('data-cat');
-    BUDGETS[c] = Number(inp.value) || 0;
+  const userKeys = Object.keys(NAMES);
+  userKeys.forEach(k => {
+    const nameEl = document.getElementById('set-name-' + k);
+    const incEl = document.getElementById('set-inc-' + k);
+    if (nameEl) NAMES[k] = nameEl.value.trim() || NAMES[k];
+    if (incEl) INCOME[k] = Number(incEl.value) || 0;
   });
+
+  CATS.forEach(function(c){
+    var v=document.getElementById('bc_'+c);
+    if(v) BUDGETS[c]=Number(v.value);
+  });
+  TOTAL_B = CATS.reduce(function(s,k){return s+Number(BUDGETS[k])},0);
+  
+  localStorage.setItem('sf_names',   JSON.stringify(NAMES));
+  localStorage.setItem('sf_income',  JSON.stringify(INCOME));
   localStorage.setItem('sf_budgets', JSON.stringify(BUDGETS));
   
-  TOTAL_B = Object.keys(BUDGETS).reduce(function(s,k){return s+Number(BUDGETS[k])},0);
-  CATS = Object.keys(BUDGETS);
-  
+  await sbSaveState();
   closeSettings();
-  renderAll(); /* Refresh all cards and charts instantly */
-  applyNamesUI();
-  applyCatsUI();
-  
-  flash('Syncing config globally...', false);
-  try {
-    busy = true; setSyncing('s');
-    await sbSaveState();
-    flash('Settings synced to all devices.', false);
-    setSyncing('ok');
-  } catch(e) {
-    flash('Cloud sync failed - saved locally.', true);
-    setSyncing('e');
-  } finally {
-    busy = false;
-  }
+  renderAll();
+  flash('Settings saved & synced');
 }
 
 function addRuleUI() {
@@ -549,8 +535,12 @@ function onManualPhoto(ev) {
   handlePhotoUpload(ev.target);
 }
 
-function setSWho(w){
-  swho=w;
-  var sN = document.getElementById('sbn'); if(sN) sN.className='wbtn'+(w===NAMES.u1?' an':'');
-  var sZ = document.getElementById('sbz'); if(sZ) sZ.className='wbtn'+(w===NAMES.u2?' az':'');
+function setSWho(w) {
+  swho = w;
+  document.querySelectorAll('#filter-user-toggles .wbtn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === w);
+  });
+  const fWhoEl = document.getElementById('fwho');
+  if(fWhoEl) fWhoEl.value = w;
+  renderLog();
 }

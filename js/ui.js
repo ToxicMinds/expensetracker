@@ -38,23 +38,48 @@ function setSyncing(st) {
   else{d.className='dot';l.textContent='live';}
 }
 function applyNamesUI() {
-  var bN = document.getElementById('bn'); if(bN) bN.textContent = NAMES.u1;
-  var bZ = document.getElementById('bz'); if(bZ) bZ.textContent = NAMES.u2;
-  var sbn = document.getElementById('sbn'); if(sbn) sbn.textContent = NAMES.u1;
-  var sbz = document.getElementById('sbz'); if(sbz) sbz.textContent = NAMES.u2;
-  
-  var lbl1 = document.getElementById('lbl-inc-u1'); if(lbl1) lbl1.textContent = NAMES.u1 + ' Income (€)';
-  var lbl2 = document.getElementById('lbl-inc-u2'); if(lbl2) lbl2.textContent = NAMES.u2 + ' Income (€)';
-  var sN1 = document.getElementById('set-name-u1'); if(sN1) sN1.value = NAMES.u1;
-  var sN2 = document.getElementById('set-name-u2'); if(sN2) sN2.value = NAMES.u2;
-  var sI1 = document.getElementById('set-inc-u1'); if(sI1) sI1.value = INCOME.u1;
-  var sI2 = document.getElementById('set-inc-u2'); if(sI2) sI2.value = INCOME.u2;
-  
-  var fwho = document.getElementById('fwho');
-  if(fwho && fwho.options.length > 2) {
-    fwho.options[1].textContent = NAMES.u1;
-    fwho.options[2].textContent = NAMES.u2;
+  const userKeys = Object.keys(NAMES);
+  const isSingle = userKeys.length === 1;
+
+  // 1. Add Expense Toggle Buttons
+  const toggleContainer = document.getElementById('user-toggles-container');
+  if (toggleContainer) {
+    toggleContainer.innerHTML = userKeys.map((key, i) => `
+      <button class="wbtn ${who === NAMES[key] ? 'active' : ''}" 
+              data-user-id="${key}"
+              onclick="setWho(NAMES['${key}'])">${esc(NAMES[key])}</button>
+    `).join('');
   }
+
+  // 2. Filter Toggles
+  const filterContainer = document.getElementById('filter-user-toggles');
+  if (filterContainer) {
+    filterContainer.innerHTML = userKeys.map((key, i) => `
+      <button class="wbtn ${swho === NAMES[key] ? 'active' : ''}" 
+              data-user-id="${key}"
+              onclick="setSWho(NAMES['${key}'])">${esc(NAMES[key])}</button>
+    `).join('');
+  }
+
+  // 3. Filter Dropdown
+  const fwhoSelect = document.getElementById('fwho');
+  if (fwhoSelect) {
+    fwhoSelect.innerHTML = '<option value="">All Members</option>' + 
+      userKeys.map(key => `<option value="${esc(NAMES[key])}">${esc(NAMES[key])}</option>`).join('');
+  }
+
+  // 4. Settings Grid
+  const settingsGrid = document.getElementById('set-members-grid');
+  if (settingsGrid) {
+    settingsGrid.innerHTML = userKeys.map(key => `
+      <div class="fg"><div class="fl">${esc(NAMES[key])} Name</div><input type="text" id="set-name-${key}" value="${esc(NAMES[key])}"></div>
+      <div class="fg"><div class="fl">${esc(NAMES[key])} Income (€)</div><input type="number" id="set-inc-${key}" min="0" step="0.01" value="${INCOME[key] || 0}"></div>
+    `).join('');
+  }
+
+  // 5. Hide chart if single user
+  const chartCard = document.getElementById('chart-users')?.closest('.card');
+  if (chartCard) chartCard.style.display = isSingle ? 'none' : 'block';
 }
 function applyCatsUI() {
   var cb=document.getElementById('bud-cats');
@@ -68,10 +93,12 @@ function applyCatsUI() {
 }
 
 function setWho(w) {
-  who=w;
-  document.getElementById('bn').className='wbtn'+(w===NAMES.u1?' an':'');
-  document.getElementById('bz').className='wbtn'+(w===NAMES.u2?' az':'');
-  document.getElementById('fwho').value = (w===NAMES.u1 ? NAMES.u1 : NAMES.u2);
+  who = w;
+  document.querySelectorAll('#user-toggles-container .wbtn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === w);
+  });
+  const fWhoEl = document.getElementById('fwho');
+  if(fWhoEl) fWhoEl.value = w;
 }
 
 function initMonths() {
@@ -178,24 +205,53 @@ function showDayDetails(dateStr) {
 }
 
 function renderCards(){
-  var all=moExp(),tot=all.reduce(function(s,e){return s+Number(e.amount);},0);
-  var nik=all.filter(function(e){return e.who===NAMES.u1;}).reduce(function(s,e){return s+Number(e.amount);},0);
-  var zuz=all.filter(function(e){return e.who===NAMES.u2;}).reduce(function(s,e){return s+Number(e.amount);},0);
-  var rem=TOTAL_B-tot,pct=Math.round(tot/TOTAL_B*100),rc=rem<0?'bad':rem<TOTAL_B*.2?'warn':'good';
-  var totInc = Number(INCOME.u1) + Number(INCOME.u2);
-  var svgs=totInc-tot, sc=svgs<0?'bad':'good';
-  document.getElementById('cards').innerHTML=
-    '<div class="card"><div class="cl">Total spent</div><div class="cv">'+fmt(tot)+'</div><div class="cs">'+pct+'% of €'+TOTAL_B+' budget</div></div>'+
-    '<div class="card"><div class="cl">Remaining</div><div class="cv '+rc+'">'+(rem<0?'-':'')+fmt(Math.abs(rem))+'</div><div class="cs">'+(rem<0?'Over budget':'Left this month')+'</div></div>'+
-    '<div class="card cn"><div class="cl">'+esc(NAMES.u1)+'</div><div class="cv">'+fmt(nik)+'</div><div class="cs">'+all.filter(function(e){return e.who===NAMES.u1;}).length+' entries</div></div>'+
-    '<div class="card cz"><div class="cl">'+esc(NAMES.u2)+'</div><div class="cv">'+fmt(zuz)+'</div><div class="cs">'+all.filter(function(e){return e.who===NAMES.u2;}).length+' entries</div></div>'+
-    '<div class="card"><div class="cl">Net Savings</div><div class="cv '+sc+'">'+(svgs<0?'-':'')+fmt(Math.abs(svgs))+'</div><div class="cs">from €'+totInc+' income</div></div>';
-  var bar=document.getElementById('alertbar');
-  if(rem<0){bar.className='alertbar d';bar.style.display='block';bar.textContent='You are '+fmt(Math.abs(rem))+' over budget this month.';}
-  else if(pct>80){bar.className='alertbar w';bar.style.display='block';bar.textContent=pct+'% of budget used — only '+fmt(rem)+' remaining.';}
-  else{bar.style.display='none';}
+  const all = moExp();
+  const tot = all.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const userKeys = Object.keys(NAMES);
   
-  updateCharts(nik, zuz, catsObj(all));
+  let userSpend = {};
+  userKeys.forEach(k => {
+    userSpend[k] = all.filter(e => e.who === NAMES[k]).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  });
+
+  const totInc = userKeys.reduce((s, k) => s + (Number(INCOME[k]) || 0), 0) || 0;
+  const svgs = totInc - tot;
+  const rem = TOTAL_B - tot;
+  const pct = TOTAL_B > 0 ? Math.round(tot / TOTAL_B * 100) : 0;
+  const rc = rem < 0 ? 'bad' : rem < TOTAL_B * 0.2 ? 'warn' : 'good';
+  const sc = svgs < 0 ? 'bad' : 'good';
+
+  let html = `
+    <div class="card"><div class="cl">Total spent</div><div class="cv">${fmt(tot)}</div><div class="cs">${pct}% of €${TOTAL_B} budget</div></div>
+    <div class="card"><div class="cl">Remaining</div><div class="cv ${rc}">${(rem < 0 ? '-' : '') + fmt(Math.abs(rem))}</div><div class="cs">${rem < 0 ? 'Over budget' : 'Left this month'}</div></div>
+  `;
+
+  userKeys.forEach((k, i) => {
+    const uc = ['purple', 'pink', 'blue', 'orange'][i % 4];
+    html += `
+      <div class="card user-card-${uc}">
+        <div class="cl">${esc(NAMES[k])}</div>
+        <div class="cv">${fmt(userSpend[k])}</div>
+        <div class="cs">${all.filter(e => e.who === NAMES[k]).length} entries</div>
+      </div>`;
+  });
+
+  html += `<div class="card"><div class="cl">Net Savings</div><div class="cv ${sc}">${(svgs < 0 ? '-' : '') + fmt(Math.abs(svgs))}</div><div class="cs">from €${totInc} income</div></div>`;
+  
+  document.getElementById('cards').innerHTML = html;
+
+  const bar = document.getElementById('alertbar');
+  if (rem < 0) {
+    bar.className = 'alertbar d'; bar.style.display = 'block'; 
+    bar.textContent = 'You are ' + fmt(Math.abs(rem)) + ' over budget this month.';
+  } else if (pct > 80) {
+    bar.className = 'alertbar w'; bar.style.display = 'block'; 
+    bar.textContent = pct + '% of budget used — only ' + fmt(rem) + ' remaining.';
+  } else {
+    bar.style.display = 'none';
+  }
+  
+  updateCharts(userSpend, catsObj(all));
 }
 
 function catsObj(all) {
@@ -207,23 +263,27 @@ function catsObj(all) {
 let chartUsers = null;
 let chartCats = null;
 
-function updateCharts(nik, zuz, catTotals) {
-  var ctxU = document.getElementById('chart-users');
-  var ctxC = document.getElementById('chart-categories');
+function updateCharts(userSpend, catTotals) {
+  const ctxU = document.getElementById('chart-users');
+  const ctxC = document.getElementById('chart-categories');
   if(!ctxU || !ctxC || typeof Chart === 'undefined') return;
   
-  var isDark = document.body.getAttribute('data-theme') === 'dark';
+  const isDark = document.body.getAttribute('data-theme') === 'dark';
   Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
   Chart.defaults.font.family = "'Outfit', sans-serif";
+
+  const userKeys = Object.keys(NAMES);
+  const labels = userKeys.map(k => NAMES[k]);
+  const data = userKeys.map(k => userSpend[k] || 0);
 
   if(chartUsers) chartUsers.destroy();
   chartUsers = new Chart(ctxU, {
     type: 'doughnut',
     data: {
-      labels: [NAMES.u1, NAMES.u2],
+      labels: labels,
       datasets: [{
-        data: [nik, zuz],
-        backgroundColor: ['#8b5cf6', '#ec4899'],
+        data: data,
+        backgroundColor: ['#8b5cf6', '#ec4899', '#3b82f6', '#f59e0b'],
         borderWidth: 0,
         cutout: '70%'
       }]
@@ -231,17 +291,17 @@ function updateCharts(nik, zuz, catTotals) {
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
   });
 
-  var labels = Object.keys(catTotals).filter(k => catTotals[k] > 0);
-  var data = labels.map(k => catTotals[k]);
+  const catLabels = Object.keys(catTotals).filter(k => catTotals[k] > 0);
+  const catData = catLabels.map(k => catTotals[k]);
 
   if(chartCats) chartCats.destroy();
   chartCats = new Chart(ctxC, {
     type: 'bar',
     data: {
-      labels: labels,
+      labels: catLabels,
       datasets: [{
         label: 'Spent',
-        data: data,
+        data: catData,
         backgroundColor: '#3b82f6',
         borderRadius: 4
       }]
@@ -250,7 +310,7 @@ function updateCharts(nik, zuz, catTotals) {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero: true, grid: { color: '#334155' } },
+        y: { beginAtZero: true, grid: { color: isDark ? '#334155' : '#e2e8f0' } },
         x: { grid: { display: false } }
       }
     }
