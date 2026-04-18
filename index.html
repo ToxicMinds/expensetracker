@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shanbhag · Expenses</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+<title>ET Expense</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- PWA manifest & Meta -->
 <link rel="manifest" href="./manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="ET Expense">
+<link rel="icon" href="./icon.png" type="image/png">
+<link rel="apple-touch-icon" href="./icon.png">
 <link rel="icon" href="./icon.png" type="image/png">
 <link rel="apple-touch-icon" href="./icon.png">
 
@@ -186,7 +190,7 @@
   <div class="topbar">
     <div class="brand" style="display:flex;align-items:center;gap:8px">
       <img src="icon.png" width="22" height="22" style="border-radius:4px">
-      <span style="font-weight:600;font-size:14px;color:var(--accent);letter-spacing:0.02em;">EXPENSE</span>
+      <span style="font-weight:700;color:var(--accent);letter-spacing:0.02em;">ET EXPENSE</span>
       <span style="font-weight:400;color:var(--text);letter-spacing:0.02em;">TRACKER</span>
     </div>
     <div class="topbar-r">
@@ -201,6 +205,18 @@
     <div class="cards" id="cards">
       <div class="card"><div class="cl">Status</div><div class="cv" style="font-size:14px"><span class="spin"></span> Connecting…</div></div>
     </div>
+    
+    <div class="charts-wrap" id="charts-wrap" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom:1.25rem;">
+      <div class="card" style="padding-top:1rem; min-height: 250px; position:relative;">
+        <div style="text-align:center; font-weight:500; margin-bottom:8px; font-size:13px; color:var(--muted)">Spent by User</div>
+        <div style="position:relative; height: 200px; width:100%"><canvas id="chart-users"></canvas></div>
+      </div>
+      <div class="card" style="padding-top:1rem; min-height: 250px; position:relative;">
+        <div style="text-align:center; font-weight:500; margin-bottom:8px; font-size:13px; color:var(--muted)">Category Breakdown</div>
+        <div style="position:relative; height: 200px; width:100%"><canvas id="chart-categories"></canvas></div>
+      </div>
+    </div>
+
     <div class="alertbar" id="alertbar"></div>
     <div class="two">
       <div class="panel">

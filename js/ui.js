@@ -194,6 +194,66 @@ function renderCards(){
   if(rem<0){bar.className='alertbar d';bar.style.display='block';bar.textContent='You are '+fmt(Math.abs(rem))+' over budget this month.';}
   else if(pct>80){bar.className='alertbar w';bar.style.display='block';bar.textContent=pct+'% of budget used — only '+fmt(rem)+' remaining.';}
   else{bar.style.display='none';}
+  
+  updateCharts(nik, zuz, catsObj(all));
+}
+
+function catsObj(all) {
+  var c={};
+  all.forEach(function(e){c[e.category]=(c[e.category]||0)+Number(e.amount);});
+  return c;
+}
+
+let chartUsers = null;
+let chartCats = null;
+
+function updateCharts(nik, zuz, catTotals) {
+  var ctxU = document.getElementById('chart-users');
+  var ctxC = document.getElementById('chart-categories');
+  if(!ctxU || !ctxC || typeof Chart === 'undefined') return;
+  
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.font.family = "'Outfit', sans-serif";
+
+  if(chartUsers) chartUsers.destroy();
+  chartUsers = new Chart(ctxU, {
+    type: 'doughnut',
+    data: {
+      labels: [NAMES.u1, NAMES.u2],
+      datasets: [{
+        data: [nik, zuz],
+        backgroundColor: ['#8b5cf6', '#ec4899'],
+        borderWidth: 0,
+        cutout: '70%'
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  var labels = Object.keys(catTotals).filter(k => catTotals[k] > 0);
+  var data = labels.map(k => catTotals[k]);
+
+  if(chartCats) chartCats.destroy();
+  chartCats = new Chart(ctxC, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Spent',
+        data: data,
+        backgroundColor: '#3b82f6',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#334155' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
 }
 
 function renderBudget(){
