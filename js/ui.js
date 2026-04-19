@@ -65,9 +65,9 @@ function applyNamesUI() {
   const filterContainer = document.getElementById('filter-user-toggles');
   if (filterContainer) {
     filterContainer.innerHTML = userKeys.map((key, i) => `
-      <button class="wbtn ${USER_BTN_CLS[i] || 'an'} ${swho === NAMES[key] ? 'active' : ''}" 
+      <button class="wbtn ${USER_BTN_CLS[i] || 'an'} ${swho === key ? 'active' : ''}" 
               data-user-id="${key}"
-              onclick="setSWho(NAMES['${key}'])">${esc(NAMES[key])}</button>
+              onclick="setSWho('${key}')">${esc(NAMES[key])}</button>
     `).join('');
   }
 

@@ -268,13 +268,15 @@
     <div id="gcal-status" style="font-size:11px; color:var(--muted); margin-top:4px; text-align:center"></div>
   </div>
 
-  <div class="fg">
+  <div style="margin-bottom:1.5rem">
     <div class="fl" id="lbl-set-lang">Language</div>
-        <select id="fwho" onchange="setSWho(this.value)" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); margin-bottom:14px">
-          <option value="">All Members</option>
-          <!-- Options populated dynamically -->
-        </select>
+    <select id="set-lang" onchange="setLang(this.value)" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text)">
+      <option value="en">English</option>
+      <option value="sk">Slovenčina</option>
+    </select>
   </div>
+
+  <button class="btn btn-p" onclick="saveSettings()" style="width:100%; margin-top:1.5rem">Save & Sync Settings</button>
 </div>
 </div>
 

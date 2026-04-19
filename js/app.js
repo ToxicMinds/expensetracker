@@ -602,12 +602,17 @@ function onManualPhoto(ev) {
   handlePhotoUpload(ev.target);
 }
 
-function setSWho(w) {
-  swho = w;
-  document.querySelectorAll('#filter-user-toggles .wbtn').forEach(btn => {
-    btn.classList.toggle('active', btn.textContent === w);
-  });
+function setSWho(id) {
+  swho = id;
   const fWhoEl = document.getElementById('fwho');
-  if(fWhoEl) fWhoEl.value = w;
-  renderLog();
+  if (fWhoEl) {
+    fWhoEl.value = id;
+    renderAll();
+  }
+}
+
+function setLang(l) {
+  LANG = l;
+  localStorage.setItem('sf_lang', l);
+  location.reload();
 }
