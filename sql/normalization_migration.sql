@@ -1,36 +1,51 @@
--- 1. Add stable ID columns to expenses
+-- 1. Ensure columns exist first
 ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS who_id TEXT;
 ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS cat_id TEXT;
-
--- 2. Add stable ID columns to recurring_expenses
 ALTER TABLE public.recurring_expenses ADD COLUMN IF NOT EXISTS who_id TEXT;
 ALTER TABLE public.recurring_expenses ADD COLUMN IF NOT EXISTS cat_id TEXT;
 
--- 3. Migrate User data to stable IDs (who -> who_id)
--- We map based on the current known names in the household
-UPDATE public.expenses SET who_id = 'u1' WHERE who IN ('Nik', 'Nikhil');
-UPDATE public.expenses SET who_id = 'u2' WHERE who = 'Zuzana';
+-- 2. Run the scoped migration
+DO $$ 
+DECLARE
+  target_house_id UUID := 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d'; 
+BEGIN
+  -- Map Nik/Nikhil to u1 (Scoped to household)
+  UPDATE public.expenses SET who_id = 'u1' 
+  WHERE (who = 'Nik' OR who = 'Nikhil') AND household_id = target_house_id;
+  
+  -- Map Zuzana to u2 (Scoped to household)
+  UPDATE public.expenses SET who_id = 'u2' 
+  WHERE who = 'Zuzana' AND household_id = target_house_id;
 
--- 4. Migrate Category data to stable IDs (category -> cat_id)
--- This ensures that if a category is renamed in settings, the data follows.
-UPDATE public.expenses SET cat_id = 'c1' WHERE category = 'Groceries';
-UPDATE public.expenses SET cat_id = 'c2' WHERE category = 'Clothing';
-UPDATE public.expenses SET cat_id = 'c3' WHERE category = 'Transport';
-UPDATE public.expenses SET cat_id = 'c4' WHERE category = 'Utilities';
-UPDATE public.expenses SET cat_id = 'c5' WHERE category = 'Dining out';
-UPDATE public.expenses SET cat_id = 'c6' WHERE category = 'Health';
-UPDATE public.expenses SET cat_id = 'c7' WHERE category = 'Entertainment';
-UPDATE public.expenses SET cat_id = 'c8' WHERE category = 'Pets';
-UPDATE public.expenses SET cat_id = 'c9' WHERE category = 'Kids';
-UPDATE public.expenses SET cat_id = 'c10' WHERE category = 'Other';
+  -- Repeat for recurring (Scoped to household)
+  UPDATE public.recurring_expenses SET who_id = 'u1' 
+  WHERE (who = 'Nik' OR who = 'Nikhil') AND household_id = target_house_id;
+  
+  UPDATE public.recurring_expenses SET who_id = 'u2' 
+  WHERE who = 'Zuzana' AND household_id = target_house_id;
 
--- Fallback for any missed categories (custom ones)
-UPDATE public.expenses SET cat_id = 'c_custom_' || category WHERE cat_id IS NULL;
+  -- Map Categories to stable IDs (Scoped to household)
+  UPDATE public.expenses SET cat_id = 'c1' WHERE category = 'Groceries' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c2' WHERE category = 'Clothing' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c3' WHERE category = 'Transport' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c4' WHERE category = 'Utilities' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c5' WHERE category = 'Dining out' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c6' WHERE category = 'Health' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c7' WHERE category = 'Entertainment' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c8' WHERE category = 'Pets' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c9' WHERE category = 'Kids' AND household_id = target_house_id;
+  UPDATE public.expenses SET cat_id = 'c10' WHERE category = 'Other' AND household_id = target_house_id;
 
--- 5. Repeat for recurring_expenses
-UPDATE public.recurring_expenses SET who_id = 'u1' WHERE who IN ('Nik', 'Nikhil');
-UPDATE public.recurring_expenses SET who_id = 'u2' WHERE who = 'Zuzana';
-UPDATE public.recurring_expenses SET cat_id = 'c_custom_' || category WHERE cat_id IS NULL;
+  -- Fallback for any custom categories
+  UPDATE public.expenses SET cat_id = 'c_custom_' || category 
+  WHERE cat_id IS NULL AND household_id = target_house_id;
+  
+  UPDATE public.recurring_expenses SET cat_id = 'c_custom_' || category 
+  WHERE cat_id IS NULL AND household_id = target_house_id;
+END $$;
 
--- 6. Verification
-SELECT who_id, who, cat_id, category, COUNT(*) FROM expenses GROUP BY who_id, who, cat_id, category LIMIT 20;
+-- 3. Verification Query (Scoped)
+SELECT who_id, who, cat_id, category, COUNT(*) 
+FROM expenses 
+WHERE household_id = 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d'
+GROUP BY who_id, who, cat_id, category;

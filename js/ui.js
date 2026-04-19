@@ -75,7 +75,7 @@ function applyNamesUI() {
   const fwhoSelect = document.getElementById('fwho');
   if (fwhoSelect) {
     fwhoSelect.innerHTML = '<option value="">All Members</option>' + 
-      userKeys.map(key => `<option value="${esc(NAMES[key])}">${esc(NAMES[key])}</option>`).join('');
+      userKeys.map(key => `<option value="${key}">${esc(NAMES[key])}</option>`).join('');
   }
 
   // 4. Settings Grid
@@ -109,7 +109,7 @@ function setWho(id) {
     btn.classList.toggle('active', btn.getAttribute('data-user-id') === id);
   });
   const fWhoEl = document.getElementById('fwho');
-  if(fWhoEl) fWhoEl.value = who;
+  if(fWhoEl) fWhoEl.value = id;
 }
 
 function initMonths() {
@@ -130,7 +130,11 @@ function curMonth(){return document.getElementById('msel').value;}
 function moExp(){var m=curMonth();return expenses.filter(function(e){return e.date&&String(e.date).slice(0,7)===m;});}
 function filtExp(){
   var w=document.getElementById('fwho').value,c=document.getElementById('fcatf').value;
-  return moExp().filter(function(e){if(w&&e.who!==w)return false;if(c&&e.category!==c)return false;return true;});
+  return moExp().filter(function(e){
+    if(w && (e.who_id !== w && e.who !== NAMES[w])) return false;
+    if(c && (e.cat_id !== c && e.category !== c)) return false; // Cat fallback too
+    return true;
+  });
 }
 
 function renderAll(){
