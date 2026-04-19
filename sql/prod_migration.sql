@@ -122,10 +122,10 @@ DECLARE
   primary_house_id UUID;
 BEGIN
   -- Find the legacy user's auth UID
-  SELECT id INTO legacy_uid FROM auth.users WHERE email = 'legacy@et-tracker.com' LIMIT 1;
+  legacy_uid := (SELECT id FROM auth.users WHERE email = 'legacy@et-tracker.com' LIMIT 1);
   
   -- Find your original primary household
-  SELECT id INTO primary_house_id FROM households ORDER BY created_at ASC LIMIT 1;
+  primary_house_id := (SELECT id FROM households ORDER BY created_at ASC LIMIT 1);
   
   IF legacy_uid IS NOT NULL AND primary_house_id IS NOT NULL THEN
     INSERT INTO app_users (id, household_id)
