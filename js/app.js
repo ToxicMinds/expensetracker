@@ -72,9 +72,9 @@ async function init() {
       localStorage.setItem('sf_gcal',    JSON.stringify(GCAL));
       applyNamesUI(); applyCatsUI();
     } else {
-      // New Household -> Show Onboarding
-      document.getElementById('onboarding-modal').classList.add('open');
-      return; // Stop here, onboarding will finish and reload
+      // Household exists but has no state. Initialize with defaults.
+      await sbSaveState();
+      applyNamesUI(); applyCatsUI();
     }
 
     expenses = await sbSelect();
