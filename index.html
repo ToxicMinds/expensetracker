@@ -295,6 +295,7 @@
       <button class="btn-g" style="padding:4px 8px;border-radius:4px;line-height:1" onclick="window.print()" title="Print / Export PDF">🖨</button>
       <button class="btn-g" style="padding:4px 8px;border-radius:4px;line-height:1" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌗</button>
       <button class="btn-g" style="padding:4px 8px;border-radius:4px;line-height:1;margin-left:2px" onclick="openSettings()">&#9881;&#65039;</button>
+      <button class="btn-g" style="padding:4px 8px;border-radius:4px;line-height:1;margin-left:2px;color:var(--danger)" onclick="logout()" title="Logout">&#128682;</button>
     </div>
   </div>
   <div class="main">
@@ -318,7 +319,7 @@
           </div>
           <div class="card" style="padding-top:1rem; min-height: 250px; position:relative;">
             <div style="text-align:center; font-weight:500; margin-bottom:8px; font-size:13px; color:var(--muted)" id="lbl-chart-cat-break">Category Breakdown</div>
-            <div style="position:relative; height: 200px; width:100%"><canvas id="chart-cats"></canvas></div>
+            <div style="position:relative; height: 200px; width:100%"><canvas id="chart-categories"></canvas></div>
           </div>
       </div>
 
@@ -328,12 +329,7 @@
             <div style="text-align:center; font-weight:500; margin-bottom:8px; font-size:13px; color:var(--muted)">6-Month Spending Trends</div>
             <div style="position:relative; height: 250px; width:100%"><canvas id="chart-trends"></canvas></div>
           </div>
-          <div class="card" style="padding-top:1rem; min-height: 250px; position:relative;">
-            <div style="text-align:center; font-weight:500; margin-bottom:8px; font-size:13px; color:var(--muted)">Spending Heatmap (Daily Hotspots)</div>
-            <div id="heatmap-container" style="height:200px; display:flex; align-items:center; justify-content:center">
-                <span class="spin"></span>
-            </div>
-          </div>
+
           <div class="card" style="padding-top:1rem; min-height: 250px; position:relative;">
             <div style="text-align:center; font-weight:500; margin-bottom:8px; font-size:13px; color:var(--muted)">Category Concentration</div>
             <div style="position:relative; height: 200px; width:100%"><canvas id="chart-radar"></canvas></div>

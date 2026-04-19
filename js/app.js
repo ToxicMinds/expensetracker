@@ -104,6 +104,33 @@ async function init() {
   initMonths();
   renderAll();
 
+  /* ═══════════════════════════════════════════════
+     SECURITY & AUTH LISTENERS
+  ═══════════════════════════════════════════════ */
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      location.reload();
+    }
+  });
+
+  // Inactivity Lockout (15 minutes)
+  let idleTime = 0;
+  const idleLimit = 15; // minutes
+  const resetIdle = () => { idleTime = 0; };
+  ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetIdle, true);
+  });
+
+  setInterval(() => {
+    idleTime++;
+    if (idleTime >= idleLimit) {
+      flash("Session expired due to inactivity.", true);
+      setTimeout(() => {
+        supabaseClient.auth.signOut();
+      }, 2000);
+    }
+  }, 60000); // Check every minute
+
   /* Handle Enable Banking OAuth callback (?session_id=...) */
   var urlParams = new URLSearchParams(window.location.search);
   var ebSession = urlParams.get('session_id') || urlParams.get('code');

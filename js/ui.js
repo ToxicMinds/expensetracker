@@ -163,21 +163,17 @@ function toggleAnalysisMode() {
   if (analysisMode === 'advanced') {
     renderTrends();
     renderRadar();
-    renderHeatmap();
   }
 }
 
 async function renderCalendar() {
-  var monthEl = document.getElementById('calendar-grid');
+  const monthEl = document.getElementById('calendar-grid');
   if(!monthEl) return;
-  var month = curMonth(); // e.g., "2023-04"
-  
+  const month = curMonth(); // e.g., "2026-04"
   if (!month) return;
-  var parts = month.split('-');
-  var y = parseInt(parts[0]);
-  var m = parseInt(parts[1]);
   
-  var daysInMonth = new Date(y, m, 0).getDate();
+  const [y, m] = month.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
   
   monthEl.innerHTML = '<div style="grid-column:1/-1; text-align:center;"><span class="spin"></span></div>';
   
@@ -192,23 +188,38 @@ async function renderCalendar() {
     // Filter local expenses for this month
     const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(month));
 
-    var html = '';
-    for(var d=1; d<=daysInMonth; d++) {
-      var dateStr = month + '-' + String(d).padStart(2,'0');
-      var dayInvs = invoices.filter(i => i.date === dateStr);
-      var dayExps = monthExpenses.filter(e => e.date === dateStr);
+    // Calculate heat data
+    const dayTotals = new Array(daysInMonth).fill(0);
+    monthExpenses.forEach(e => {
+      const d = parseInt(e.date.split('-')[2]);
+      if (d >= 1 && d <= daysInMonth) dayTotals[d-1] += Number(e.amount);
+    });
+    const maxSpend = Math.max(...dayTotals, 1);
+
+    let html = '';
+    for(let d=1; d<=daysInMonth; d++) {
+      const dateStr = month + '-' + String(d).padStart(2,'0');
+      const dayInvs = invoices.filter(i => i.date === dateStr);
+      const dayExps = monthExpenses.filter(e => e.date === dateStr);
+      const spent = dayTotals[d-1];
       
       const hasSomething = dayInvs.length > 0 || dayExps.length > 0;
-      var cls = hasSomething ? 'calendar-day has-invoice' : 'calendar-day';
       
-      var inner = '<div class="day-num">' + d + '</div>';
+      // Heatmap color logic
+      const alpha = spent > 0 ? Math.min(1, spent / (maxSpend * 0.7)) : 0;
+      const bgColor = spent > 0 ? `rgba(59, 130, 246, ${Math.max(0.1, alpha)})` : 'transparent';
       
-      if(dayInvs.length > 0 || dayExps.length > 0) {
-        const count = dayInvs.length + dayExps.length;
-        inner += `<div class="inv-amt">${count} ${count === 1 ? 'entry' : 'entries'}</div>`;
+      const cls = hasSomething ? 'calendar-day has-invoice' : 'calendar-day';
+      const style = spent > 0 ? `style="background-color: ${bgColor}; border-color: var(--accent)"` : '';
+      
+      let inner = `<div class="day-num">${d}</div>`;
+      if(spent > 0) {
+        inner += `<div class="day-amt">€${Math.round(spent)}</div>`;
+      } else if (dayInvs.length > 0) {
+        inner += `<div class="day-amt" style="opacity:0.5; font-size:10px">Invoices</div>`;
       }
       
-      html += '<div class="' + cls + '" onclick="showDayDetails(\'' + dateStr + '\')">' + inner + '</div>';
+      html += `<div class="${cls}" ${style} onclick="showDayDetails('${dateStr}')">${inner}</div>`;
     }
     monthEl.innerHTML = html;
   } catch(e) {
@@ -1175,28 +1186,37 @@ function renderTrends() {
         {
           label: t('Spent'),
           data: spendData,
-          borderColor: 'var(--accent)',
-          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          borderColor: '#8b5cf6',
+          backgroundColor: 'rgba(139, 92, 246, 0.1)',
           fill: true,
-          tension: 0.4
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointBackgroundColor: '#8b5cf6'
         },
         {
           label: t('Income') || 'Income',
           data: incomeData,
-          borderColor: 'var(--info)',
+          borderColor: '#0ea5e9',
           borderDash: [5, 5],
           tension: 0,
-          fill: false
+          fill: false,
+          borderWidth: 2
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
       scales: {
-        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-        x: { grid: { display: false } }
+        y: {
+          beginAtZero: true,
+          suggestedMax: Math.max(...spendData, ...incomeData) * 1.2,
+          ticks: { callback: v => '€' + v }
+        }
+      },
+      plugins: {
+        legend: { position: 'bottom' }
       }
     }
   });
@@ -1221,11 +1241,13 @@ function renderRadar() {
     data: {
       labels: labels,
       datasets: [{
-        label: t('Current Month'),
+        label: t('Category Concentration'),
         data: data,
-        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-        borderColor: 'var(--nikhil)',
-        pointBackgroundColor: 'var(--nikhil)'
+        backgroundColor: 'rgba(79, 70, 229, 0.4)',
+        borderColor: '#4f46e5',
+        borderWidth: 2,
+        pointBackgroundColor: '#4f46e5',
+        pointRadius: 4
       }]
     },
     options: {
@@ -1233,40 +1255,31 @@ function renderRadar() {
       maintainAspectRatio: false,
       scales: {
         r: {
-          angleLines: { color: 'rgba(0,0,0,0.1)' },
-          grid: { color: 'rgba(0,0,0,0.1)' },
-          suggestedMin: 0
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          angleLines: { color: 'rgba(0,0,0,0.05)' },
+          ticks: { display: false },
+          pointLabels: {
+            font: { size: 12, weight: '600' }
+          }
         }
+      },
+      plugins: {
+        legend: { display: false }
       }
     }
   });
 }
 
 function renderHeatmap() {
-  const container = document.getElementById('heatmap-container');
-  if (!container) return;
-
-  const m = curMonth();
-  const dateParts = m.split('-');
-  const daysInMonth = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]), 0).getDate();
-  const daySpend = new Array(daysInMonth).fill(0);
-
-  expenses.filter(e => e.date && e.date.startsWith(m)).forEach(e => {
-    const d = parseInt(e.date.split('-')[2]);
-    if (d > 0 && d <= daysInMonth) daySpend[d - 1] += Number(e.amount);
-  });
-
-  const max = Math.max(...daySpend, 1);
-  
-  let html = '<div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; width:100%">';
-  daySpend.forEach((s, i) => {
-    const alpha = Math.min(1, s / (max * 0.7));
-    const color = s > 0 ? `rgba(59, 130, 246, ${Math.max(0.1, alpha)})` : 'var(--bg)';
-    html += `<div title="Day ${i+1}: €${s.toFixed(2)}" style="height:24px; border-radius:3px; background:${color}; border:1px solid var(--border)"></div>`;
-  });
-  html += '</div>';
-  
-  container.innerHTML = html;
+  // Logic merged into renderCalendar
 }
+
+async function logout() {
+  if (!confirm("Are you sure you want to log out?")) return;
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) flash(error.message, true);
+}
+
 
 
