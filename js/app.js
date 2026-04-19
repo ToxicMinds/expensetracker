@@ -2,12 +2,56 @@
    MAIN APP INSTANCE & BINDINGS
 ═══════════════════════════════════════════════ */
 
+
 async function init() {
-  enforceAppLock();
+  // 1. BOOT: Initialize Supabase
+  const booted = await sysBootSupabase();
+  if (!booted) {
+    flash("Connection Error. Please refresh.", true);
+    return;
+  }
+
+  // 2. AUTH: Check for Session
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    document.getElementById('auth-modal').classList.add('open');
+    document.getElementById('app').style.display = 'none';
+    return;
+  }
+  SESSION_JWT = session.access_token;
+
+  // 3. HOUSEHOLD: Resolve Mapping
+  try {
+    const { data: userData, error: userError } = await supabaseClient
+      .from('app_users')
+      .select('household_id')
+      .eq('id', session.user.id)
+      .maybeSingle();
+      
+    if (userError) throw userError;
+    if (userData && userData.household_id) {
+      HOUSEHOLD_ID = userData.household_id;
+    }
+  } catch (e) {
+    console.warn("Household lookup failed:", e.message);
+  }
+
+  // Handle Translations early
+  applyTranslations();
+  document.getElementById('auth-modal').classList.remove('open');
+  document.getElementById('app').style.display = 'block';
+
+  // 4. READY or ONBOARD:
+  if (!HOUSEHOLD_ID) {
+    document.getElementById('onboarding-modal').classList.add('open');
+    return; 
+  }
+
+  // 5. DATA LOAD:
   setSyncing('s');
   try {
     var cState = await sbLoadState();
-    if(cState) {
+    if (cState) {
       NAMES   = cState.names   || NAMES;
       INCOME  = cState.income  || INCOME;
       BUDGETS = cState.budgets || BUDGETS;
@@ -27,17 +71,29 @@ async function init() {
       localStorage.setItem('sf_banks',   JSON.stringify(BANKS));
       localStorage.setItem('sf_gcal',    JSON.stringify(GCAL));
       applyNamesUI(); applyCatsUI();
+    } else {
+      // New Household -> Show Onboarding
+      document.getElementById('onboarding-modal').classList.add('open');
+      return; // Stop here, onboarding will finish and reload
     }
+
     expenses = await sbSelect();
     dbg('Loaded '+expenses.length+' rows');
+    
+    // Load Recurring
+    await sbSelectRecurring();
+    
     setSyncing('ok');
   } catch(e) {
     setSyncing('e');
     dbg('INIT: '+e.message, e, true);
     document.getElementById('cards').innerHTML =
-      '<div class="card" style="grid-column:1/-1"><div class="cl" style="color:var(--danger)">Connection error</div>'+
-      '<div style="font-size:13px;margin-top:6px">'+esc(e.message)+'</div></div>';
-    toggleDbg();
+      '<div class="card" style="grid-column:1/-1; text-align:center; padding:2rem">' +
+      '<div style="font-size:32px; margin-bottom:12px">⚠️</div>' +
+      '<div class="cl" style="color:var(--danger); font-size:14px; text-transform:none; letter-spacing:0">Connection Error</div>' +
+      '<div style="font-size:13px; color:var(--muted); margin:8px 0 16px">' + esc(e.message) + '</div>' +
+      '<button class="btn btn-p" style="width:auto; padding:8px 24px" onclick="location.reload()">🔄 Retry</button>' +
+      '</div>';
   }
   
   if (document.getElementById('fdate')) {
@@ -89,7 +145,16 @@ async function init() {
           MEMORY=s.memory||MEMORY; RULES=s.rules||RULES; GOALS=s.goals||GOALS; BANKS=s.banks||BANKS; GCAL=s.gcal||GCAL;
           CATS=Object.keys(BUDGETS); TOTAL_B=CATS.reduce(function(a,k){return a+Number(BUDGETS[k])},0);
           applyNamesUI(); applyCatsUI(); renderAll();
-        }
+          const projected = getProjectedRecurring(expenses);
+  const projEl = document.getElementById('projected-savings-val');
+  if (projEl) {
+    const totInc = Object.values(INCOME).reduce((a,b)=>a+Number(b), 0);
+    const totExp = expenses.reduce((a,b)=>a+Number(b.amount), 0);
+    const projSavings = totInc - (totExp + projected);
+    projEl.textContent = (projSavings < 0 ? '-' : '') + '€' + Math.abs(projSavings).toFixed(2);
+    projEl.className = 'cv ' + (projSavings < 0 ? 'bad' : 'good');
+  }
+}
       }
       if(JSON.stringify(r)!==JSON.stringify(expenses)){expenses=r;initMonths();renderAll();}
     }catch(e){}
@@ -125,6 +190,7 @@ async function addExpense() {
       }
       cancelEdit();
       initMonths(); renderAll(); flash('Updated!', false); setSyncing('ok');
+      await syncToGCal(row);
     } catch(e) {
       flash(e.message, true); setSyncing('e');
     } finally {
@@ -136,10 +202,12 @@ async function addExpense() {
       await sbInsert(row);
       row.created_at=new Date().toISOString();
       expenses.unshift(row);
+      syncToGCal(row); // Auto-sync to GCal
       document.getElementById('famt').value='';
       document.getElementById('fdesc').value='';
       initMonths(); document.getElementById('msel').value=date.slice(0,7);
       renderAll(); flash('Saved!',false); setSyncing('ok');
+      await syncToGCal(row);
     } catch(e){flash(e.message,true);setSyncing('e');}
     finally{busy=false;btn.disabled=false;btn.textContent='Add expense';}
   }
@@ -295,6 +363,7 @@ async function confirmReview() {
         await sbInsert(row);
         row.created_at = new Date().toISOString();
         expenses.unshift(row);
+        syncToGCal(row); // Auto-sync to GCal
         addedCount++;
         
         if (MEMORY[nm] !== cat) {
@@ -340,42 +409,28 @@ function delCategory(catName) {
 }
 
 async function saveSettings() {
-  if(busy) return;
-  NAMES.u1 = document.getElementById('set-name-u1').value.trim() || 'Person 1';
-  NAMES.u2 = document.getElementById('set-name-u2').value.trim() || 'Person 2';
-  localStorage.setItem('sf_names', JSON.stringify(NAMES));
-
-  INCOME.u1 = Number(document.getElementById('set-inc-u1').value) || 0;
-  INCOME.u2 = Number(document.getElementById('set-inc-u2').value) || 0;
-  localStorage.setItem('sf_income', JSON.stringify(INCOME));
-  
-  var inputs = document.querySelectorAll('[id^=set-b-]');
-  inputs.forEach(function(inp) {
-    var c = inp.getAttribute('data-cat');
-    BUDGETS[c] = Number(inp.value) || 0;
+  const userKeys = Object.keys(NAMES);
+  userKeys.forEach(k => {
+    const nameEl = document.getElementById('set-name-' + k);
+    const incEl = document.getElementById('set-inc-' + k);
+    if (nameEl) NAMES[k] = nameEl.value.trim() || NAMES[k];
+    if (incEl) INCOME[k] = Number(incEl.value) || 0;
   });
+
+  CATS.forEach(function(c){
+    var v=document.getElementById('bc_'+c);
+    if(v) BUDGETS[c]=Number(v.value);
+  });
+  TOTAL_B = CATS.reduce(function(s,k){return s+Number(BUDGETS[k])},0);
+  
+  localStorage.setItem('sf_names',   JSON.stringify(NAMES));
+  localStorage.setItem('sf_income',  JSON.stringify(INCOME));
   localStorage.setItem('sf_budgets', JSON.stringify(BUDGETS));
   
-  TOTAL_B = Object.keys(BUDGETS).reduce(function(s,k){return s+Number(BUDGETS[k])},0);
-  CATS = Object.keys(BUDGETS);
-  
+  await sbSaveState();
   closeSettings();
-  renderAll(); /* Refresh all cards and charts instantly */
-  applyNamesUI();
-  applyCatsUI();
-  
-  flash('Syncing config globally...', false);
-  try {
-    busy = true; setSyncing('s');
-    await sbSaveState();
-    flash('Settings synced to all devices.', false);
-    setSyncing('ok');
-  } catch(e) {
-    flash('Cloud sync failed - saved locally.', true);
-    setSyncing('e');
-  } finally {
-    busy = false;
-  }
+  renderAll();
+  flash('Settings saved & synced');
 }
 
 function addRuleUI() {
@@ -496,8 +551,12 @@ function onManualPhoto(ev) {
   handlePhotoUpload(ev.target);
 }
 
-function setSWho(w){
-  swho=w;
-  var sN = document.getElementById('sbn'); if(sN) sN.className='wbtn'+(w===NAMES.u1?' an':'');
-  var sZ = document.getElementById('sbz'); if(sZ) sZ.className='wbtn'+(w===NAMES.u2?' az':'');
+function setSWho(w) {
+  swho = w;
+  document.querySelectorAll('#filter-user-toggles .wbtn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === w);
+  });
+  const fWhoEl = document.getElementById('fwho');
+  if(fWhoEl) fWhoEl.value = w;
+  renderLog();
 }
