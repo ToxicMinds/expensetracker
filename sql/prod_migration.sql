@@ -111,7 +111,7 @@ ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Main invoice isolation" ON invoices FOR ALL USING (household_id IN (SELECT household_id FROM app_users WHERE id = auth.uid()));
 
 -- ========================================================
--- SEED LEGACY BRIDGE USER MAPPING
+-- SEED LEGACY BRIDGE USER MAPPING & ADOPT ORPHANS
 -- ========================================================
 -- The PIN bridge logic requires the user legacy@et-tracker.com to have a mapping.
 -- This script will map the legacy user to the oldest (original) household in your system.
@@ -127,9 +127,23 @@ BEGIN
   -- Find your original primary household
   primary_house_id := (SELECT id FROM households ORDER BY created_at ASC LIMIT 1);
   
+  IF primary_house_id IS NULL THEN
+      -- Create a default household if the database was completely single-tenant before
+      INSERT INTO households (name) VALUES ('My Household') RETURNING id INTO primary_house_id;
+  END IF;
+
   IF legacy_uid IS NOT NULL AND primary_house_id IS NOT NULL THEN
+    -- Map user to household
     INSERT INTO app_users (id, household_id)
     VALUES (legacy_uid, primary_house_id)
     ON CONFLICT (id) DO UPDATE SET household_id = EXCLUDED.household_id;
+  END IF;
+
+  -- ADOPT ORPHANED DATA:
+  -- If you had expenses before this SaaS migration, their household_id is currently NULL.
+  -- This assigns all your historical data to your primary household so it doesn't disappear.
+  IF primary_house_id IS NOT NULL THEN
+      UPDATE public.expenses SET household_id = primary_house_id WHERE household_id IS NULL;
+      UPDATE public.invoices SET household_id = primary_house_id WHERE household_id IS NULL;
   END IF;
 END $$;
