@@ -22,6 +22,17 @@ function checkMonthlyRitual() {
 
   if (dismissed === monthStr) return;
 
+  // Meaningful Check: Don't nudge if they only just started
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  const prevMonth = d.toISOString().slice(0, 7);
+  const prevExpenses = expenses.filter(e => e.date && e.date.startsWith(prevMonth));
+  
+  if (prevExpenses.length < 15) {
+    // Too few entries to be meaningful, or they are a new user.
+    return;
+  }
+
   if (day === 1) {
     openRitual();
   } else {
@@ -416,9 +427,9 @@ function renderCards(){
   const userKeys = Object.keys(NAMES);
   const now = new Date();
   
-  // 1. Separate Spending vs Savings
-  // 'Savings' is a transfer to wealth, not a cost.
-  const spent = all.filter(e => e.category !== 'Savings').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  // 1. Separate Spending vs Savings vs Adjustments
+  // 'Savings' is wealth building, 'Adjustment' is rebates/deposits. Neither are "costs".
+  const spent = all.filter(e => e.category !== 'Savings' && e.category !== 'Adjustment').reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const saved = all.filter(e => e.category === 'Savings').reduce((s, e) => s + (Number(e.amount) || 0), 0);
   
   const rem = TOTAL_B - spent;
@@ -429,7 +440,7 @@ function renderCards(){
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
     return d.toISOString().slice(0,7);
   })();
-  const prevTot = expenses.filter(e => e.date && e.date.startsWith(prevM) && e.category !== 'Savings').reduce((s, e) => s + Number(e.amount), 0);
+  const prevTot = expenses.filter(e => e.date && e.date.startsWith(prevM) && e.category !== 'Savings' && e.category !== 'Adjustment').reduce((s, e) => s + Number(e.amount), 0);
   const delta = spent - prevTot;
   const deltaStr = (delta > 0 ? '+' : '-') + '€' + Math.abs(delta).toFixed(2);
   const deltaColor = delta > 0 ? 'var(--danger)' : 'var(--success)';
@@ -441,7 +452,7 @@ function renderCards(){
 
   let userSpend = {};
   userKeys.forEach(k => {
-    userSpend[k] = all.filter(e => (e.who_id === k || (!e.who_id && e.who === NAMES[k])) && e.category !== 'Savings').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    userSpend[k] = all.filter(e => (e.who_id === k || (!e.who_id && e.who === NAMES[k])) && e.category !== 'Savings' && e.category !== 'Adjustment').reduce((s, e) => s + (Number(e.amount) || 0), 0);
   });
 
   const totInc = userKeys.reduce((s, k) => s + (Number(INCOME[k]) || 0), 0) || 0;

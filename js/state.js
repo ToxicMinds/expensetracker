@@ -161,7 +161,7 @@ async function sysBootSupabase() {
 var defaultNames = {u1: 'Person 1'};
 var NAMES = JSON.parse(localStorage.getItem('sf_names')) || defaultNames;
 
-var defaultBudgets = {Groceries:500,Transport:100,Utilities:200,Dining:100,Other:100};
+var defaultBudgets = {Groceries:500,Transport:100,Utilities:200,Dining:100,Other:100,Adjustment:0};
 var BUDGETS = JSON.parse(localStorage.getItem('sf_budgets')) || defaultBudgets;
 
 var oldInc = JSON.parse(localStorage.getItem('sf_income'));
