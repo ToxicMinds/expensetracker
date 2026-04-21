@@ -340,6 +340,7 @@
     </div>
 
     <div class="alertbar" id="alertbar"></div>
+    <div id="quick-entry-container" style="margin: 0 14px 14px 14px;"></div>
     <div class="two">
       <div class="panel">
         <div class="ptitle" id="form-title">
@@ -500,7 +501,31 @@ Yesterday - Starbucks - 5.40
     <button class="btn btn-p" onclick="confirmAnalyzerResults()">Import Verified Transactions</button>
   </div>
 </div>
-<!-- ══ HELP OVERLAY ══ -->
+
+<!-- ══ RITUAL NUDGE ══ -->
+<div id="ritual-nudge" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; padding:8px 16px; border-radius:20px; font-size:13px; font-weight:600; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:9000; align-items:center; gap:8px; cursor:pointer;" onclick="openRitual()">
+  <span style="font-size:16px">💡</span> Month Summary Ready
+</div>
+
+<!-- ══ RITUAL OVERLAY (DRAWER) ══ -->
+<div id="ritual-overlay" class="mbk" style="display:none; align-items:flex-end; z-index:9999">
+  <div class="modal" style="margin-bottom:0; border-radius:24px 24px 0 0; animation:slideUp 0.4s cubic-bezier(0, 1, 0, 1); padding:24px; width:100%; max-width:600px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+      <div class="mtitle" style="margin-bottom:0">Financial Close-Out</div>
+      <button class="btn-scan" style="background:none; border:none; color:var(--muted); font-size:24px; cursor:pointer" onclick="dismissRitual()">&times;</button>
+    </div>
+    
+    <div id="ritual-content" style="min-height:100px;">
+      <!-- Generated dynamically -->
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:24px">
+      <button class="btn btn-g" style="flex:1; margin-top:0" onclick="dismissRitual()">Dismiss</button>
+      <button class="btn btn-p" style="flex:2; margin-top:0" onclick="applyRitualBudgets()">Apply & Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="help-overlay" class="mbk" style="display:none; align-items:flex-end; z-index:9999" onclick="this.style.display='none'">
   <div class="modal" style="margin-bottom:0; border-radius:24px 24px 0 0; animation:slideUp 0.3s ease-out; padding-bottom:40px; width:100%; max-width:600px">
     <div class="mtitle" style="font-size:16px">Dashboard Guide</div>

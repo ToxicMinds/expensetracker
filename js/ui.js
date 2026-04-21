@@ -14,6 +14,134 @@ function showHelp(msg) {
   document.getElementById('help-overlay').style.display = 'flex';
 }
 
+function checkMonthlyRitual() {
+  const now = new Date();
+  const day = now.getDate();
+  const monthStr = now.toISOString().slice(0, 7); 
+  const dismissed = localStorage.getItem('sf_ritual_dismissed');
+
+  if (dismissed === monthStr) return;
+
+  if (day === 1) {
+    openRitual();
+  } else {
+    showRitualNudge();
+  }
+}
+
+function showRitualNudge() {
+  const nudge = document.getElementById('ritual-nudge');
+  if (nudge) nudge.style.display = 'flex';
+}
+
+function openRitual() {
+  const overlay = document.getElementById('ritual-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  generateMonthlySummary();
+}
+
+function dismissRitual() {
+  const monthStr = new Date().toISOString().slice(0, 7);
+  localStorage.setItem('sf_ritual_dismissed', monthStr);
+  document.getElementById('ritual-overlay').style.display = 'none';
+  document.getElementById('ritual-nudge').style.display = 'none';
+}
+
+async function generateMonthlySummary() {
+  const content = document.getElementById('ritual-content');
+  content.innerHTML = '<div class="te"><span class="spin"></span> Analyzing last month...</div>';
+  
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  const prevMonth = d.toISOString().slice(0, 7);
+  const prevMonthName = d.toLocaleString('en-US', { month: 'long' });
+
+  const prevExpenses = expenses.filter(e => e.date && e.date.startsWith(prevMonth));
+  const spent = prevExpenses.filter(e => e.category !== 'Savings').reduce((s, e) => s + Number(e.amount), 0);
+  const saved = prevExpenses.filter(e => e.category === 'Savings').reduce((s, e) => s + Number(e.amount), 0);
+
+  let summary = `In ${prevMonthName}, you spent **€${fmt(spent)}** and saved **€${fmt(saved)}**. `;
+  
+  const suggestions = CATS.map(cat => {
+     const catSpent = prevExpenses.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0);
+     const currentBud = BUDGETS[cat] || 0;
+     const diff = catSpent - currentBud;
+     if (Math.abs(diff) > 20) {
+       return `<li>${cat}: Spent €${fmt(catSpent)} (Target was €${fmt(currentBud)}).</li>`;
+     }
+     return null;
+  }).filter(x => x).join('');
+
+  content.innerHTML = `
+    <div style="font-size:15px; margin-bottom:15px; color:var(--text)">${summary}</div>
+    <div style="font-size:12px; font-weight:700; margin-bottom:8px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em">Historical Context</div>
+    <ul style="font-size:13px; padding-left:18px; margin-bottom:20px; color:var(--text); line-height:1.6">
+      ${suggestions || '<li>Excellent discipline! All categories were within €20 of budget.</li>'}
+    </ul>
+    <div style="font-size:12px; color:var(--muted); font-style:italic">Would you like to adjust your current budgets to match last month's actual spending?</div>
+  `;
+}
+
+async function applyRitualBudgets() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  const prevMonth = d.toISOString().slice(0, 7);
+  const prevExpenses = expenses.filter(e => e.date && e.date.startsWith(prevMonth));
+
+  CATS.forEach(cat => {
+    const catSpent = prevExpenses.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0);
+    if (catSpent > 0) BUDGETS[cat] = Math.round(catSpent);
+  });
+
+  await sbSaveState();
+  renderAll();
+  dismissRitual();
+  flash("Budgets updated based on last month's performance!", false);
+}
+
+function getTopVendors(limit = 6) {
+  const counts = {};
+  expenses.slice(0, 150).forEach(e => {
+    if (!e.description) return;
+    const key = e.description.trim().toUpperCase();
+    if (!counts[key]) counts[key] = { count: 0, category: e.category, original: e.description };
+    counts[key].count++;
+  });
+  return Object.values(counts)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+function quickFill(desc, cat) {
+  document.getElementById('fdesc').value = desc;
+  document.getElementById('fcat').value = cat;
+  document.getElementById('famt').focus();
+  const form = document.getElementById('form-title');
+  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderQuickEntry() {
+  const container = document.getElementById('quick-entry-container');
+  if (!container) return;
+  const tops = getTopVendors();
+  if (tops.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <div style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; margin-bottom:8px; padding-left:4px">Frequent</div>
+    <div class="h-scroll" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; -webkit-overflow-scrolling:touch;">
+      ${tops.map(t => `
+        <button class="btn-g" style="white-space:nowrap; padding:8px 16px; font-size:13px; border-radius:14px; background:var(--bg-soft); border:1px solid var(--border); box-shadow:0 1px 2px rgba(0,0,0,0.05)" 
+                onclick="quickFill('${esc(t.original)}', '${esc(t.category)}')">
+          ${esc(t.original)}
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
 function esc(s) { 
   if(!s)return''; 
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); 
@@ -155,6 +283,7 @@ function renderAll(){
   renderBudget();
   renderGoals();
   renderBankSync();
+  renderQuickEntry();
   if (viewMode === 'log') {
     renderLog();
   } else {

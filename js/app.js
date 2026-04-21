@@ -104,6 +104,9 @@ async function init() {
   
   initMonths();
   renderAll();
+  
+  // 5. RITUAL: Check for Monthly Summary
+  checkMonthlyRitual();
 
   /* ═══════════════════════════════════════════════
      SECURITY & AUTH LISTENERS
