@@ -460,7 +460,17 @@ function renderCards(){
 
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const currentDay = Math.max(1, now.getDate());
-  const projected = (spent / currentDay) * daysInMonth;
+
+  // ADVANCED FORECAST: "Bill-Aware"
+  // We separate fixed bills from daily spending so the projection isn't "Rent every day"
+  const billTotal = Object.values(BUDGETS).reduce((a,b)=>a+b, 0); // Total Budgeted (assuming budgets cover bills)
+  // Better: sum actual recurring patterns if we have them
+  const recurringPaid = all.filter(e => e.recurring_id).reduce((s,e)=>s+Number(e.amount), 0);
+  const variableSpent = spent - recurringPaid;
+  const projectedVariable = (variableSpent / currentDay) * daysInMonth;
+  
+  // Total projected = Projected Variable + Total Expected Monthly Bills (Budget)
+  const projected = projectedVariable + TOTAL_B; 
   const diff = projected - TOTAL_B;
 
   let userSpend = {};
@@ -485,14 +495,16 @@ function renderCards(){
       <div class="cs">${pct}% used of €${TOTAL_B}</div>
     </div>
     <div class="card" style="border:1px solid var(--border-soft)">
-      <div class="cl">Forecast <span class="h-tip" onclick="showHelp('Linear projection: (Spent / Days Passed) * Days in Month. Assumes your spending pace remains the same.')">ⓘ</span></div>
+      <div class="cl">Forecast <span class="h-tip" onclick="showHelp('Smart Forecast: (Variable Daily Average * Days in Month) + Total Fixed Budgets. This assumes your daily habits continue but accounts for bills being paid once a month.')">ⓘ</span></div>
       <div class="cv ${diff > 0 ? 'bad' : 'good'}">€${fmt(projected)}</div>
       <div class="cs" style="color:${diff > 0 ? 'var(--danger)' : 'var(--success)'}">${diff > 0 ? '⚠️ €'+fmt(diff)+' OVER' : '✅ €'+fmt(Math.abs(diff))+' UNDER'}</div>
     </div>
     <div class="card" style="border-top:3px solid #10b981">
       <div class="cl">Total Saved <span class="h-tip" onclick="showHelp('Sum of all entries in the Savings category. This is money kept, not spent.')">ⓘ</span></div>
-      <div class="cv" style="color:#10b981">€${fmt(saved)}</div>
-      <div class="cs">€${fmt(netSavings)} net liquidity</div>
+      <div class="card" style="border-left:4px solid var(--nikhil)">
+      <div class="cl">Net Savings <span class="h-tip" onclick="showHelp('Your real profit: Total Income - Total Spent. (Adjustment/Savings excluded). If this is high, check your income settings.')">ⓘ</span></div>
+      <div class="cv ${sc}">€${fmt(netSavings)}</div>
+      <div class="cs">${Math.round(netSavings/totInc*100)}% of income kept</div>
     </div>
   `;
 

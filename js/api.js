@@ -230,11 +230,12 @@ async function categoriseImage(b64, mime) {
   var prompt='Read this Slovak receipt. Use eKasa format if present. '+
     'Extract store name and return it in "store".\n'+
     'Identify EVERY purchased item, its EXACT price. '+
-    'Assign EACH item to a generic category (Groceries, Kids, Health, Transport, Pets, Utilities, Clothing, Dining out, Entertainment, Other).\n'+
+    'Assign EACH item to a generic category.\n'+
+    'CONTEXT MATTERS: Items like "Soft Drink" or "Water" or "Cola" are Groceries at a supermarket (Lidl/Tesco/Kaufland) but Dining out at a restaurant/fast-food (McDonalds/KFC/Burger King).\n'+
     'Produce valid JSON: {"store":"Lidl","date":"2023-10-15","items":[{"name":"Mlieko","amount":1.15,"category":"Groceries"}]}\n'+
     'CAT must be exactly one of: '+CATS.join(', ')+'\n'+
     getMemoryPrompt() + '\n' +
-    'Rules: food/drinks/tobacco→Groceries. clothes/shoes→Clothing. toys/school→Kids. medicine→Health. alcohol→Dining out. pet items→Pets. fuel/parking→Transport.\n'+
+    'Rules: food/drinks/tobacco→Groceries (unless at restaurant). clothes/shoes→Clothing. toys/school→Kids. medicine→Health. alcohol→Dining out. pet items→Pets. fuel/parking→Transport.\n'+
     'List every line item. Extract date if visible.';
 
   var payload = {
