@@ -135,10 +135,12 @@ tbody tr:last-child td{border-bottom:none}
 .swipe-row{position:relative;will-change:transform;transition:transform 0.25s cubic-bezier(.4,0,.2,1),background 0.2s;touch-action:pan-y;}
 @media(max-width:640px){
   .desktop-only{display:none !important;}
-  .swipe-row td:nth-child(2){font-size:10px; width:50px;}
-  .swipe-row td:nth-child(3){font-size:10px; width:60px;}
-  .swipe-row td:nth-child(4){font-weight:600; color:var(--text);} /* Category bold on mobile */
-  thead th:first-child{display:none;}
+  .swipe-row td{padding:8px 4px !important; vertical-align: top;}
+  .swipe-row td:nth-child(2){font-size:10px; width:45px; color:var(--muted);}
+  .swipe-row td:nth-child(3){width:60px;}
+  .swipe-row td:nth-child(4){display: flex; flex-direction: column; gap: 2px;}
+  .swipe-row .m-desc { display: block; font-size: 11px; color: var(--muted); font-style: italic; }
+  thead th:first-child, thead th:nth-child(5){display:none;}
 }
 
 /* Swipe labels */
@@ -148,16 +150,16 @@ tbody tr:last-child td{border-bottom:none}
   bottom: 0;
   display: flex;
   align-items: center;
-  padding: 0 25px;
-  font-weight: 800;
-  font-size: 11px;
+  padding: 0 20px;
+  font-weight: 900;
+  font-size: 13px;
   color: white;
   pointer-events: none;
   opacity: 0;
-  z-index: -1;
+  z-index: 10;
 }
-.swipe-indicator.left { left: 0; } /* Visible when row moves right */
-.swipe-indicator.right { right: 0; } /* Visible when row moves left */
+.swipe-indicator.left { left: 0; background: var(--danger); color: white; justify-content: flex-start; width: 100%; } 
+.swipe-indicator.right { right: 0; background: #10b981; color: white; justify-content: flex-end; width: 100%; } /* Bright Green for EDIT */
 
 
 /* ── spinners ── */

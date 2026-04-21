@@ -278,51 +278,54 @@ function showDayDetails(dateStr) {
 
 function renderCards(){
   const all = moExp();
-  const tot = all.reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const userKeys = Object.keys(NAMES);
   const now = new Date();
   
-  // 1. Calculations
-  const rem = TOTAL_B - tot;
+  // 1. Separate Spending vs Savings
+  // 'Savings' is a transfer to wealth, not a cost.
+  const spent = all.filter(e => e.category !== 'Savings').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const saved = all.filter(e => e.category === 'Savings').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  
+  const rem = TOTAL_B - spent;
   const rc = rem < 0 ? 'bad' : rem < TOTAL_B * 0.2 ? 'warn' : 'good';
-  const pct = TOTAL_B > 0 ? Math.round(tot / TOTAL_B * 100) : 0;
+  const pct = TOTAL_B > 0 ? Math.round(spent / TOTAL_B * 100) : 0;
   
   const prevM = (function(){
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
     return d.toISOString().slice(0,7);
   })();
-  const prevTot = expenses.filter(e => e.date && e.date.startsWith(prevM)).reduce((s, e) => s + Number(e.amount), 0);
-  const delta = tot - prevTot;
+  const prevTot = expenses.filter(e => e.date && e.date.startsWith(prevM) && e.category !== 'Savings').reduce((s, e) => s + Number(e.amount), 0);
+  const delta = spent - prevTot;
   const deltaStr = (delta > 0 ? '+' : '-') + '€' + Math.abs(delta).toFixed(2);
   const deltaColor = delta > 0 ? 'var(--danger)' : 'var(--success)';
 
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const currentDay = Math.max(1, now.getDate());
-  const projected = (tot / currentDay) * daysInMonth;
+  const projected = (spent / currentDay) * daysInMonth;
   const diff = projected - TOTAL_B;
 
   let userSpend = {};
   userKeys.forEach(k => {
-    userSpend[k] = all.filter(e => (e.who_id === k) || (!e.who_id && e.who === NAMES[k])).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    userSpend[k] = all.filter(e => (e.who_id === k || (!e.who_id && e.who === NAMES[k])) && e.category !== 'Savings').reduce((s, e) => s + (Number(e.amount) || 0), 0);
   });
 
   const totInc = userKeys.reduce((s, k) => s + (Number(INCOME[k]) || 0), 0) || 0;
-  const svgs = totInc - tot;
-  const sc = svgs < 0 ? 'bad' : 'good';
+  const netSavings = totInc - spent; // This is income minus real spending
+  const sc = netSavings < 0 ? 'bad' : 'good';
 
   // 2. Build HTML
   let html = `
-    <div class="card"><div class="cl">Total Spent</div><div class="cv">€${fmt(tot)}</div><div class="cs"><span style="color:${deltaColor}">${delta > 0 ? '▲' : '▼'} ${deltaStr}</span> vs last month</div></div>
+    <div class="card"><div class="cl">Total Spent</div><div class="cv">€${fmt(spent)}</div><div class="cs"><span style="color:${deltaColor}">${delta > 0 ? '▲' : '▼'} ${deltaStr}</span> vs last month</div></div>
     <div class="card"><div class="cl">Budget Left</div><div class="cv ${rc}">€${fmt(rem)}</div><div class="cs">${pct}% used of €${TOTAL_B}</div></div>
     <div class="card" style="border:1px solid var(--border-soft)">
       <div class="cl">Forecast</div>
       <div class="cv ${diff > 0 ? 'bad' : 'good'}">€${fmt(projected)}</div>
       <div class="cs" style="color:${diff > 0 ? 'var(--danger)' : 'var(--success)'}">${diff > 0 ? '⚠️ €'+fmt(diff)+' OVER' : '✅ €'+fmt(Math.abs(diff))+' UNDER'}</div>
     </div>
-    <div class="card">
-      <div class="cl">Mortgage Balance</div>
-      <div class="cv">€${fmt(112000 - (((now.getFullYear()-2024)*12 + now.getMonth()) * 280))}</div>
-      <div class="cs">Next: €633.00 (recurring)</div>
+    <div class="card" style="border-top:3px solid #10b981">
+      <div class="cl">Total Saved</div>
+      <div class="cv" style="color:#10b981">€${fmt(saved)}</div>
+      <div class="cs">€${fmt(netSavings)} net liquidity</div>
     </div>
   `;
 
@@ -455,7 +458,10 @@ function renderLog(){
       '</td>'+
       '<td style="font-family:var(--mono);font-size:12px;color:var(--muted)">'+fmtDate(e.date)+'</td>'+
       '<td><span class="pill '+pillCls+'">'+displayName+'</span></td>'+
-      '<td><span class="pill pc" style="font-weight:600">'+esc(e.category)+'</span></td>'+
+      '<td>'+
+        '<span class="pill pc" style="font-weight:600">'+esc(e.category)+'</span>'+
+        '<span class="m-desc">'+esc(e.description||'')+'</span>'+
+      '</td>'+
       '<td class="desktop-only" style="color:var(--muted)">'+esc(e.description||'—')+'</td>'+
       '<td class="ac" style="font-weight:600">€'+fmt(e.amount)+'</td>'+
       '</tr>';
@@ -499,11 +505,11 @@ function attachSwipeHandlers() {
       
       if (dx > 20) {
         row.style.background = 'rgba(239,68,68,0.2)';
-        if(indDel) { indDel.style.opacity = 1; indDel.style.zIndex = 10; }
+        if(indDel) { indDel.style.opacity = 1; indDel.style.zIndex = 5; }
         if(indEdit) indEdit.style.opacity = 0;
       } else if (dx < -20) {
-        row.style.background = 'rgba(37,99,235,0.15)';
-        if(indEdit) { indEdit.style.opacity = 1; indEdit.style.zIndex = 10; }
+        row.style.background = 'rgba(16,185,129,0.15)'; // Green background for edit
+        if(indEdit) { indEdit.style.opacity = 1; indEdit.style.zIndex = 5; indEdit.textContent = 'UPDATE'; }
         if(indDel) indDel.style.opacity = 0;
       } else {
         row.style.background = '';
