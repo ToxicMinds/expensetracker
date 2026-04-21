@@ -57,8 +57,7 @@ BEGIN
           'Kindergarten', 180,   -- ~€57-61 x 3 months per semester
           'Other',        200
         )
-    ),
-    updated_at = NOW()
+    )
   WHERE id = hid;
 
   -- ── STEP 2: INSERT APRIL 2026 BASELINE EXPENSES ───────────
@@ -110,6 +109,6 @@ SELECT
   COUNT(*)                    AS entries
 FROM expenses
 WHERE household_id = 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d'
-  AND date LIKE '2026-04%'
+  AND date::TEXT LIKE '2026-04%'
 GROUP BY category
 ORDER BY total_eur DESC;

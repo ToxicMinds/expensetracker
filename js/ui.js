@@ -1,6 +1,14 @@
 /* ═══════════════════════════════════════════════
    UTILITIES
 ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════ */
+function setElText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
 function esc(s) { 
   if(!s)return''; 
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); 
@@ -272,42 +280,50 @@ function renderCards(){
   const all = moExp();
   const tot = all.reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const userKeys = Object.keys(NAMES);
+  const now = new Date();
   
+  // 1. Calculations
+  const rem = TOTAL_B - tot;
+  const rc = rem < 0 ? 'bad' : rem < TOTAL_B * 0.2 ? 'warn' : 'good';
+  const pct = TOTAL_B > 0 ? Math.round(tot / TOTAL_B * 100) : 0;
+  
+  const prevM = (function(){
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+    return d.toISOString().slice(0,7);
+  })();
+  const prevTot = expenses.filter(e => e.date && e.date.startsWith(prevM)).reduce((s, e) => s + Number(e.amount), 0);
+  const delta = tot - prevTot;
+  const deltaStr = (delta > 0 ? '+' : '-') + '€' + Math.abs(delta).toFixed(2);
+  const deltaColor = delta > 0 ? 'var(--danger)' : 'var(--success)';
+
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const currentDay = Math.max(1, now.getDate());
+  const projected = (tot / currentDay) * daysInMonth;
+  const diff = projected - TOTAL_B;
+
   let userSpend = {};
   userKeys.forEach(k => {
     userSpend[k] = all.filter(e => (e.who_id === k) || (!e.who_id && e.who === NAMES[k])).reduce((s, e) => s + (Number(e.amount) || 0), 0);
   });
 
-  const totInc  = userKeys.reduce((s, k) => s + (Number(INCOME[k]) || 0), 0) || 0;
-  const svgs    = totInc - tot;
-  const rem     = TOTAL_B - tot;
-  const pct     = TOTAL_B > 0 ? Math.round(tot / TOTAL_B * 100) : 0;
-  const rc      = rem < 0 ? 'bad' : rem < TOTAL_B * 0.2 ? 'warn' : 'good';
-  const sc      = svgs < 0 ? 'bad' : 'good';
+  const totInc = userKeys.reduce((s, k) => s + (Number(INCOME[k]) || 0), 0) || 0;
+  const svgs = totInc - tot;
+  const sc = svgs < 0 ? 'bad' : 'good';
 
-  // Month-over-month delta
-  const prevM = (function(){
-    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
-    return d.toISOString().slice(0,7);
-  })();
-  const prevTot = expenses.filter(e => e.date && e.date.startsWith(prevM))
-                          .reduce((s, e) => s + Number(e.amount), 0);
-  const delta   = tot - prevTot;
-  const deltaStr = (delta > 0 ? '+' : '') + fmt(Math.abs(delta));
-  const deltaColor = delta > 0 ? 'var(--danger)' : 'var(--accent)';
-  const deltaSuffix = prevTot > 0
-    ? ` <span style="font-size:11px; color:${deltaColor}; font-weight:600">${delta > 0 ? '▲' : '▼'} €${deltaStr} vs last month</span>`
-    : '';
-
-  const totalIncome = Object.values(INCOME).reduce((a,b)=>a+Number(b), 0);
-  const projected   = getProjectedRecurring(all);
-  const projSavings = totalIncome - (tot + projected);
-  const psc         = projSavings < 0 ? 'bad' : 'good';
-
+  // 2. Build HTML
   let html = `
-    <div class="card"><div class="cl">${t('Total spent')}</div><div class="cv">${fmt(tot)}</div><div class="cs">${pct}% of €${TOTAL_B} budget${deltaSuffix}</div></div>
-    <div class="card"><div class="cl">${t('Remaining')}</div><div class="cv ${rc}">${(rem < 0 ? '-' : '') + fmt(Math.abs(rem))}</div><div class="cs">${rem < 0 ? t('Over budget') : t('Left this month')}</div></div>
-    <div class="card"><div class="cl">Proj. Savings</div><div class="cv ${psc}">${(projSavings < 0 ? '-' : '') + fmt(Math.abs(projSavings))}</div><div class="cs">incl. €${projected} expected bills</div></div>
+    <div class="card"><div class="cl">Total Spent</div><div class="cv">€${fmt(tot)}</div><div class="cs"><span style="color:${deltaColor}">${delta > 0 ? '▲' : '▼'} ${deltaStr}</span> vs last month</div></div>
+    <div class="card"><div class="cl">Budget Left</div><div class="cv ${rc}">€${fmt(rem)}</div><div class="cs">${pct}% used of €${TOTAL_B}</div></div>
+    <div class="card" style="border:1px solid var(--border-soft)">
+      <div class="cl">Forecast</div>
+      <div class="cv ${diff > 0 ? 'bad' : 'good'}">€${fmt(projected)}</div>
+      <div class="cs" style="color:${diff > 0 ? 'var(--danger)' : 'var(--success)'}">${diff > 0 ? '⚠️ €'+fmt(diff)+' OVER' : '✅ €'+fmt(Math.abs(diff))+' UNDER'}</div>
+    </div>
+    <div class="card">
+      <div class="cl">Mortgage Balance</div>
+      <div class="cv">€${fmt(112000 - (((now.getFullYear()-2024)*12 + now.getMonth()) * 280))}</div>
+      <div class="cs">Next: €633.00 (recurring)</div>
+    </div>
   `;
 
   userKeys.forEach((k, i) => {
@@ -315,33 +331,27 @@ function renderCards(){
     html += `
       <div class="card" style="border-top: 3px solid var(--${varPrefix})">
         <div class="cl">${esc(NAMES[k])}</div>
-        <div class="cv" style="color:var(--${varPrefix})">${fmt(userSpend[k])}</div>
-        <div class="cs">${all.filter(e => e.who === NAMES[k]).length} entries</div>
+        <div class="cv" style="color:var(--${varPrefix})">€${fmt(userSpend[k])}</div>
+        <div class="cs">${all.filter(e => (e.who_id === k) || (!e.who_id && e.who === NAMES[k])).length} entries</div>
       </div>`;
   });
 
-  html += `<div class="card"><div class="cl">${t('Net Savings')}</div><div class="cv ${sc}">${(svgs < 0 ? '-' : '') + fmt(Math.abs(svgs))}</div><div class="cs">from €${totInc} income</div></div>`;
+  html += `<div class="card"><div class="cl">Net Savings</div><div class="cv ${sc}">€${(svgs < 0 ? '-' : '') + fmt(Math.abs(svgs))}</div><div class="cs">from €${fmt(totInc)} income</div></div>`;
+  
   document.getElementById('cards').innerHTML = html;
 
-  // Global budget alert bar
+  // 3. Alerts
   const bar = document.getElementById('alertbar');
-  if (rem < 0) {
-    bar.className = 'alertbar d'; bar.style.display = 'block';
-    bar.textContent = '⚠️ You are €' + fmt(Math.abs(rem)) + ' over budget this month.';
-  } else if (pct > 80) {
-    bar.className = 'alertbar w'; bar.style.display = 'block';
-    bar.textContent = '⚡ ' + pct + '% of total budget used — €' + fmt(rem) + ' remaining.';
-  } else {
-    bar.style.display = 'none';
-  }
-
-  // Per-category 80% alerts
-  const catSpend = {};
-  all.forEach(e => { catSpend[e.category] = (catSpend[e.category] || 0) + Number(e.amount); });
-  const overCats = CATS.filter(c => BUDGETS[c] > 0 && (catSpend[c] || 0) / BUDGETS[c] >= 0.8 && (catSpend[c] || 0) < BUDGETS[c]);
-  if (overCats.length > 0 && rem >= 0) {
-    bar.className = 'alertbar w'; bar.style.display = 'block';
-    bar.textContent = '⚡ Approaching limit in: ' + overCats.map(c => `${c} (${Math.round((catSpend[c]||0)/BUDGETS[c]*100)}%)`).join(', ');
+  if (bar) {
+    if (rem < 0) {
+      bar.className = 'alertbar d'; bar.style.display = 'block';
+      bar.textContent = '⚠️ You are €' + fmt(Math.abs(rem)) + ' over budget this month.';
+    } else if (pct > 80) {
+      bar.className = 'alertbar w'; bar.style.display = 'block';
+      bar.textContent = '⚡ ' + pct + '% of total budget used — €' + fmt(rem) + ' remaining.';
+    } else {
+      bar.style.display = 'none';
+    }
   }
 
   updateCharts(userSpend, catsObj(all));
@@ -445,9 +455,9 @@ function renderLog(){
       '</td>'+
       '<td style="font-family:var(--mono);font-size:12px;color:var(--muted)">'+fmtDate(e.date)+'</td>'+
       '<td><span class="pill '+pillCls+'">'+displayName+'</span></td>'+
-      '<td><span class="pill pc">'+esc(e.category)+'</span></td>'+
-      '<td style="color:var(--muted)">'+esc(e.description||'—')+'</td>'+
-      '<td class="ac">'+fmt(e.amount)+'</td>'+
+      '<td><span class="pill pc" style="font-weight:600">'+esc(e.category)+'</span></td>'+
+      '<td class="desktop-only" style="color:var(--muted)">'+esc(e.description||'—')+'</td>'+
+      '<td class="ac" style="font-weight:600">€'+fmt(e.amount)+'</td>'+
       '</tr>';
   }).join('');
   document.getElementById('logtot').textContent=fmt(tot);
@@ -465,6 +475,11 @@ function attachSwipeHandlers() {
       startY = ev.touches[0].clientY;
       dx = 0; swiping = false;
       row.style.transition = 'none';
+      
+      // Add indicators if they don't exist
+      if (!row.querySelector('.swipe-indicator')) {
+        row.insertAdjacentHTML('afterbegin', '<div class="swipe-indicator left">DELETE</div><div class="swipe-indicator right">EDIT</div>');
+      }
     }, {passive: true});
 
     row.addEventListener('touchmove', function(ev) {
@@ -478,15 +493,34 @@ function attachSwipeHandlers() {
       dx = curX - startX;
       var clamped = Math.max(-130, Math.min(130, dx));
       row.style.transform = 'translateX(' + clamped + 'px)';
-      if (dx > 40) row.style.background = 'rgba(239,68,68,0.15)';
-      else if (dx < -40) row.style.background = 'rgba(37,99,235,0.12)';
-      else row.style.background = '';
+      
+      var indDel = row.querySelector('.swipe-indicator.left');
+      var indEdit = row.querySelector('.swipe-indicator.right');
+      
+      if (dx > 20) {
+        row.style.background = 'rgba(239,68,68,0.2)';
+        if(indDel) { indDel.style.opacity = 1; indDel.style.zIndex = 10; }
+        if(indEdit) indEdit.style.opacity = 0;
+      } else if (dx < -20) {
+        row.style.background = 'rgba(37,99,235,0.15)';
+        if(indEdit) { indEdit.style.opacity = 1; indEdit.style.zIndex = 10; }
+        if(indDel) indDel.style.opacity = 0;
+      } else {
+        row.style.background = '';
+        if(indDel) indDel.style.opacity = 0;
+        if(indEdit) indEdit.style.opacity = 0;
+      }
     }, {passive: false});
 
     row.addEventListener('touchend', function() {
       row.style.transition = 'transform 0.25s cubic-bezier(.4,0,.2,1), background 0.2s';
       row.style.transform = '';
       row.style.background = '';
+      var indDel = row.querySelector('.swipe-indicator.left');
+      var indEdit = row.querySelector('.swipe-indicator.right');
+      if(indDel) indDel.style.opacity = 0;
+      if(indEdit) indEdit.style.opacity = 0;
+      
       if (!swiping) return;
       if (dx > threshold) {
         if (confirm('Delete this expense?')) deleteExp(expId);

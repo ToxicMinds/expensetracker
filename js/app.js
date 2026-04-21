@@ -155,41 +155,42 @@ async function init() {
     alert('Google Calendar has been successfully connected!');
   }
 
-  setInterval(async function(){
-    if(busy) return;
-    try{
-      var r=await sbSelect();
-      var s=await sbLoadState();
-      if(s) {
-        var changed = (
-          JSON.stringify(s.budgets) !== JSON.stringify(BUDGETS) ||
-          JSON.stringify(s.names)   !== JSON.stringify(NAMES)   ||
-          JSON.stringify(s.income)  !== JSON.stringify(INCOME)  ||
-          JSON.stringify(s.memory)  !== JSON.stringify(MEMORY)  ||
-          JSON.stringify(s.rules)   !== JSON.stringify(RULES)   ||
-          JSON.stringify(s.goals)   !== JSON.stringify(GOALS)   ||
-          JSON.stringify(s.banks)   !== JSON.stringify(BANKS)   ||
-          JSON.stringify(s.gcal)    !== JSON.stringify(GCAL)
-        );
-        if(changed) {
-          NAMES=s.names||NAMES; INCOME=s.income||INCOME; BUDGETS=s.budgets||BUDGETS;
-          MEMORY=s.memory||MEMORY; RULES=s.rules||RULES; GOALS=s.goals||GOALS; BANKS=s.banks||BANKS; GCAL=s.gcal||GCAL;
-          CATS=Object.keys(BUDGETS); TOTAL_B=CATS.reduce(function(a,k){return a+Number(BUDGETS[k])},0);
-          applyNamesUI(); applyCatsUI(); renderAll();
-          const projected = getProjectedRecurring(expenses);
-  const projEl = document.getElementById('projected-savings-val');
-  if (projEl) {
-    const totInc = Object.values(INCOME).reduce((a,b)=>a+Number(b), 0);
-    const totExp = expenses.reduce((a,b)=>a+Number(b.amount), 0);
-    const projSavings = totInc - (totExp + projected);
-    projEl.textContent = (projSavings < 0 ? '-' : '') + '€' + Math.abs(projSavings).toFixed(2);
-    projEl.className = 'cv ' + (projSavings < 0 ? 'bad' : 'good');
-  }
+  setupRealtime();
 }
+
+function setupRealtime() {
+  if (!supabaseClient) return;
+  
+  supabaseClient.channel('db-changes')
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'expenses', 
+      filter: 'household_id=eq.' + HOUSEHOLD_ID 
+    }, async () => {
+      if (busy) return;
+      expenses = await sbSelect();
+      initMonths();
+      renderAll();
+    })
+    .on('postgres_changes', { 
+      event: 'UPDATE', 
+      schema: 'public', 
+      table: 'app_state', 
+      filter: 'id=eq.' + HOUSEHOLD_ID 
+    }, async () => {
+      const s = await sbLoadState();
+      if (s) {
+        NAMES=s.names||NAMES; INCOME=s.income||INCOME; BUDGETS=s.budgets||BUDGETS;
+        MEMORY=s.memory||MEMORY; RULES=s.rules||RULES; GOALS=s.goals||GOALS; BANKS=s.banks||BANKS; GCAL=s.gcal||GCAL;
+        CATS=Object.keys(BUDGETS); 
+        TOTAL_B=CATS.reduce(function(a,k){return a+Number(BUDGETS[k])},0);
+        applyNamesUI(); 
+        applyCatsUI(); 
+        renderAll();
       }
-      if(JSON.stringify(r)!==JSON.stringify(expenses)){expenses=r;initMonths();renderAll();}
-    }catch(e){}
-  }, 30000);
+    })
+    .subscribe();
 }
 
 function uid() { return 'ex_'+Date.now().toString(36)+Math.random().toString(36).substr(2,5); }
