@@ -339,7 +339,7 @@ function renderCards(){
       </div>`;
   });
 
-  html += `<div class="card"><div class="cl">Net Savings</div><div class="cv ${sc}">€${(svgs < 0 ? '-' : '') + fmt(Math.abs(svgs))}</div><div class="cs">from €${fmt(totInc)} income</div></div>`;
+  html += `<div class="card"><div class="cl">Net Savings</div><div class="cv ${sc}">€${(netSavings < 0 ? '-' : '') + fmt(Math.abs(netSavings))}</div><div class="cs">from €${fmt(totInc)} income</div></div>`;
   
   document.getElementById('cards').innerHTML = html;
 
