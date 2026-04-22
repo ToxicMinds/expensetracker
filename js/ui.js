@@ -793,12 +793,8 @@ function cancelReview() { closeScanner(); }
    SETTINGS & MODALS
 ═══════════════════════════════════════════════ */
 function openSettings() {
-  document.getElementById('nav-modal')?.classList.add('open');
-  document.getElementById('settings-modal')?.classList.add('open');
-  applyNamesUI();
-  renderSettingsRules();
-  renderBudgetsGrid();
-  renderIntegrations();
+  // Merged into the lower declaration at line 1283
+  return;
 }
 
 function closeSettings() {
@@ -923,7 +919,7 @@ function renderBudgetsGrid() {
   if(!grid) return;
   grid.innerHTML = '';
   CATS.forEach(function(c, idx) {
-    grid.innerHTML += '<div class="fg" style="margin-bottom:0"><div class="fl" style="display:flex;justify-content:space-between"><span>'+esc(c)+' (€)</span><button onclick="delCategory(\''+esc(c)+'\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1">&#x2715;</button></div><input type="number" id="set-b-'+idx+'" value="'+(BUDGETS[c]||0)+'" min="0" step="1" data-cat="'+esc(c)+'"></div>';
+    grid.innerHTML += '<div class="fg" style="margin-bottom:0"><div class="fl" style="display:flex;justify-content:space-between"><span>'+esc(c)+' (€)</span><button onclick="delCategory(\''+esc(c)+'\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1">&#x2715;</button></div><input type="number" id="bc_'+c+'" value="'+(BUDGETS[c]||0)+'" min="0" step="1" data-cat="'+esc(c)+'"></div>';
   });
 }
 
@@ -1281,7 +1277,12 @@ function toggleTheme() {
    RECURRING BILLS UI
 ═══════════════════════════════════════════════ */
 async function openSettings() {
+  document.getElementById('nav-modal')?.classList.add('open');
   document.getElementById('settings-modal').classList.add('open');
+  applyNamesUI();
+  renderSettingsRules();
+  renderBudgetsGrid();
+  renderIntegrations();
   await renderRecurring();
 }
 

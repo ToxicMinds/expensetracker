@@ -85,20 +85,8 @@ async function init() {
   // 5. RITUAL: Check for Monthly Summary
   checkMonthlyRitual();
 
-  // 4. REALTIME: Listen for changes
-  supabaseClient.channel('db-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `household_id=eq.${HOUSEHOLD_ID}` }, async () => {
-      expenses = await sbSelect();
-      renderAll();
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state', filter: `id=eq.${HOUSEHOLD_ID}` }, async (payload) => {
-      if (payload.new && payload.new.config) {
-        applyState(payload.new.config);
-        renderAll();
-        checkMonthlyRitual();
-      }
-    })
-    .subscribe();
+  // 4. REALTIME: Consolidated in setupRealtime()
+  setupRealtime();
 
   /* ═══════════════════════════════════════════════
      SECURITY & AUTH LISTENERS
@@ -246,7 +234,6 @@ async function addExpense() {
       await sbInsert(row);
       row.created_at=new Date().toISOString();
       expenses.unshift(row);
-      syncToGCal(row); // Auto-sync to GCal
       document.getElementById('famt').value='';
       document.getElementById('fdesc').value='';
       initMonths(); document.getElementById('msel').value=date.slice(0,7);
@@ -417,11 +404,19 @@ async function confirmReview() {
         var nm  = document.getElementById('rnm_'+i).value;
         if(isNaN(amt)||!nm) continue;
         
-        var row = {id:uid(), who:swho, date:dateStr, category:cat, amount:amt, description:nm, invoice_id: invoiceId};
+        var row = {
+          id: uid(), 
+          who: NAMES[swho] || swho, 
+          who_id: swho, 
+          date: dateStr, 
+          category: cat, 
+          amount: amt, 
+          description: nm, 
+          invoice_id: invoiceId
+        };
         await sbInsert(row);
         row.created_at = new Date().toISOString();
         expenses.unshift(row);
-        syncToGCal(row); // Auto-sync to GCal
         addedCount++;
         
         if (MEMORY[nm] !== cat) {
