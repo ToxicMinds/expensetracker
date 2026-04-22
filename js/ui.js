@@ -4,18 +4,6 @@
 /* ═══════════════════════════════════════════════
    UI HELPERS
 ═══════════════════════════════════════════════ */
-function setElText(id, text) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = text;
-}
-
-function showHelp(msg) {
-  const overlay = document.getElementById('help-overlay');
-  if (!overlay) return;
-  document.getElementById('help-content').textContent = msg;
-  overlay.classList.add('open');
-}
-
 function checkMonthlyRitual() {
   const now = new Date();
   const day = now.getDate();
@@ -167,18 +155,6 @@ function renderQuickEntry() {
   `;
 }
 
-function esc(s) { 
-  if(!s)return''; 
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); 
-}
-function today() { var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function fmtDate(s) {
-  if (!s) return "";
-  const p = String(s).split("-");
-  if (p.length !== 3) return s;
-  return `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}/${p[0]}`;
-}
-function fmt(n) { return Number(n).toFixed(2); }
 function checkEkasa(b64, mime) {
   /* Attempting to parse QR string structure */
   var txt = '';
@@ -198,13 +174,6 @@ function checkEkasa(b64, mime) {
 /* ═══════════════════════════════════════════════
    UI & RENDER
 ═══════════════════════════════════════════════ */
-function setSyncing(st) {
-  var d=document.getElementById('sdot'),l=document.getElementById('slbl');
-  if(!d||!l) return;
-  if(st==='s'){d.className='dot s';l.textContent='syncing';}
-  else if(st==='e'){d.className='dot e';l.textContent='error';}
-  else{d.className='dot';l.textContent='live';}
-}
 // Map user index to CSS classes for pills and buttons
 const USER_BTN_CLS  = ['an', 'az', 'a3', 'a4'];
 const USER_PILL_CLS = ['pn', 'pz', 'p3', 'p4'];
@@ -450,46 +419,78 @@ function renderCards(){
   const { netSavings, pct: savPct }     = calcNetSavings(totInc, spent);
   const sc = netSavings < 0 ? 'bad' : 'good';
 
-  // ── BUILD CARD HTML ──────────────────────────────────────────────────────
-  let html = `
-    <div class="card">
-      <div class="cl">Total Spent <span class="h-tip" onclick="showHelp('Sum of all expenses this month, excluding Savings.')">ⓘ</span></div>
-      <div class="cv">€${fmt(spent)}</div>
-      <div class="cs"><span style="color:${deltaColor}">${delta > 0 ? '▲' : '▼'} ${deltaStr}</span> vs last month</div>
-    </div>
-    <div class="card">
-      <div class="cl">Budget Left <span class="h-tip" onclick="showHelp('Current monthly budget minus actual spending.')">ⓘ</span></div>
-      <div class="cv ${rc}">€${fmt(remaining)}</div>
-      <div class="cs">${pct}% used of €${TOTAL_B}</div>
-    </div>
-    <div class="card" style="border:1px solid var(--border-soft)">
-      <div class="cl">Forecast <span class="h-tip" onclick="showHelp('Projected end-of-month spend based on your variable daily rate. Recurring bills are excluded from the daily rate so they do not inflate the projection.')">ⓘ</span></div>
-      <div class="cv ${diff > 0 ? 'bad' : 'good'}">€${fmt(projected)}</div>
-      <div class="cs" style="color:${diff > 0 ? 'var(--danger)' : 'var(--success)'}">
-        ${diff > 0 ? '⚠️ €'+fmt(diff)+' OVER' : '✅ €'+fmt(Math.abs(diff))+' UNDER'}
+  // Helper for generating flipped cards
+  const card = (label, value, sub, info, extraClass = '', style = '') => `
+    <div class="card-container">
+      <div class="card-flipper">
+        <div class="card card-front ${extraClass}" style="${style}">
+          <div class="cl">${label} <span class="h-tip" onclick="toggleCardFlip(this)">ⓘ</span></div>
+          <div class="cv">${value}</div>
+          <div class="cs">${sub}</div>
+        </div>
+        <div class="card card-back" style="${style}">
+          <div class="cl">${label} <span class="h-tip" onclick="toggleCardFlip(this)">✕</span></div>
+          <div class="card-info-text">${info}</div>
+        </div>
       </div>
     </div>
-    <div class="card" style="border-top:3px solid #10b981">
-      <div class="cl">Total Saved <span class="h-tip" onclick="showHelp('Sum of all entries in the Savings category. This is money kept, not spent.')">ⓘ</span></div>
-      <div class="cv">€${fmt(saved)}</div>
-      <div class="cs">Kept this month</div>
-    </div>
-    <div class="card" style="border-left:4px solid var(--nikhil)">
-      <div class="cl">Net Savings <span class="h-tip" onclick="showHelp('Total Income minus Total Spent. Your real monthly profit.')">ⓘ</span></div>
-      <div class="cv ${sc}">€${fmt(netSavings)}</div>
-      <div class="cs">${savPct}% of income kept</div>
-    </div>
   `;
+
+  // ── BUILD CARD HTML ──────────────────────────────────────────────────────
+  let html = card(
+    'Total Spent', 
+    `€${fmt(spent)}`, 
+    `<span style="color:${deltaColor}">${delta > 0 ? '▲' : '▼'} ${deltaStr}</span> vs last month`,
+    'Sum of all expenses this month, excluding Savings and Adjustments. This is your core cost of living.'
+  );
+
+  html += card(
+    'Budget Left',
+    `€${fmt(remaining)}`,
+    `${pct}% used of €${TOTAL_B}`,
+    'Current monthly budget minus actual spending. Keeps you on track for your financial goals.',
+    rc
+  );
+
+  html += card(
+    'Forecast',
+    `€${fmt(projected)}`,
+    `<span style="color:${diff > 0 ? 'var(--danger)' : 'var(--success)'}">${diff > 0 ? '⚠️ €'+fmt(diff)+' OVER' : '✅ €'+fmt(Math.abs(diff))+' UNDER'}</span>`,
+    'Projected end-of-month spend based on your variable daily rate. Recurring bills are excluded from the daily rate so they do not inflate the projection.',
+    diff > 0 ? 'bad' : 'good',
+    'border:1px solid var(--border-soft)'
+  );
+
+  html += card(
+    'Total Saved',
+    `€${fmt(saved)}`,
+    'Kept this month',
+    'Sum of all entries in the Savings category. This is money kept, not spent.',
+    '',
+    'border-top:3px solid #10b981'
+  );
+
+  html += card(
+    'Net Savings',
+    `€${fmt(netSavings)}`,
+    `${savPct}% of income kept`,
+    'Total Income minus Total Spent. Your real monthly profit and the true measure of your financial health.',
+    sc,
+    'border-left:4px solid var(--nikhil)'
+  );
 
   const userColors = ['nikhil', 'zuzana', 'u3', 'u4'];
   userKeys.forEach(function(k, i) {
     const color      = userColors[i % 4];
     const entryCount = all.filter(function(e) { return e.who_id === k || (!e.who_id && e.who === NAMES[k]); }).length;
-    html += '<div class="card" style="border-top: 3px solid var(--' + color + ')">' +
-      '<div class="cl">' + esc(NAMES[k]) + ' <span class="h-tip" onclick="showHelp(\'Spending attributed to ' + esc(NAMES[k]) + ' this month (excluding Savings).\')">ⓘ</span></div>' +
-      '<div class="cv" style="color:var(--' + color + ')">€' + fmt(userSpend[k]) + '</div>' +
-      '<div class="cs">' + entryCount + ' entries</div>' +
-      '</div>';
+    html += card(
+      esc(NAMES[k]),
+      `€${fmt(userSpend[k])}`,
+      `${entryCount} entries`,
+      `Spending attributed to ${esc(NAMES[k])} this month (excluding Savings).`,
+      '',
+      `border-top: 3px solid var(--${color}); color: var(--${color})`
+    );
   });
 
   document.getElementById('cards').innerHTML = html;
@@ -634,35 +635,41 @@ function attachSwipeHandlers() {
       if (!row.querySelector('.swipe-indicator')) {
         row.insertAdjacentHTML('afterbegin', '<div class="swipe-indicator left">DELETE</div><div class="swipe-indicator right">EDIT</div>');
       }
-    }, {passive: true});
+    }, {passive: false});
 
     row.addEventListener('touchmove', function(ev) {
       var curX = ev.touches[0].clientX;
       var curY = ev.touches[0].clientY;
       var absDx = Math.abs(curX - startX);
       var absDy = Math.abs(curY - startY);
-      if (!swiping && absDy > absDx) return; // scroll wins
-      swiping = true;
-      ev.preventDefault();
-      dx = curX - startX;
-      var clamped = Math.max(-130, Math.min(130, dx));
-      row.style.transform = 'translateX(' + clamped + 'px)';
       
-      var indDel = row.querySelector('.swipe-indicator.left');
-      var indEdit = row.querySelector('.swipe-indicator.right');
+      if (!swiping) {
+        if (absDy > absDx) return; // scroll wins
+        if (absDx > 10) swiping = true;
+      }
       
-      if (dx > 20) {
-        row.style.background = 'rgba(239,68,68,0.2)';
-        if(indDel) { indDel.style.opacity = 1; indDel.style.zIndex = 5; }
-        if(indEdit) indEdit.style.opacity = 0;
-      } else if (dx < -20) {
-        row.style.background = 'rgba(16,185,129,0.15)'; // Green background for edit
-        if(indEdit) { indEdit.style.opacity = 1; indEdit.style.zIndex = 5; indEdit.textContent = 'UPDATE'; }
-        if(indDel) indDel.style.opacity = 0;
-      } else {
-        row.style.background = '';
-        if(indDel) indDel.style.opacity = 0;
-        if(indEdit) indEdit.style.opacity = 0;
+      if (swiping) {
+        if (ev.cancelable) ev.preventDefault();
+        dx = curX - startX;
+        var clamped = Math.max(-130, Math.min(130, dx));
+        row.style.transform = 'translateX(' + clamped + 'px)';
+        
+        var indDel = row.querySelector('.swipe-indicator.left');
+        var indEdit = row.querySelector('.swipe-indicator.right');
+        
+        if (dx > 20) {
+          row.style.background = 'rgba(239,68,68,0.2)';
+          if(indDel) { indDel.style.opacity = 1; indDel.style.zIndex = 5; }
+          if(indEdit) indEdit.style.opacity = 0;
+        } else if (dx < -20) {
+          row.style.background = 'rgba(16,185,129,0.15)'; // Green background for edit
+          if(indEdit) { indEdit.style.opacity = 1; indEdit.style.zIndex = 5; indEdit.textContent = 'UPDATE'; }
+          if(indDel) indDel.style.opacity = 0;
+        } else {
+          row.style.background = '';
+          if(indDel) indDel.style.opacity = 0;
+          if(indEdit) indEdit.style.opacity = 0;
+        }
       }
     }, {passive: false});
 
@@ -715,11 +722,6 @@ function exportCSV() {
   flash(`Exported ${rows.length} expenses to CSV`);
 }
 
-function flash(msg,isErr) {
-  var f=document.getElementById('flash');
-  f.textContent=msg; f.style.color=isErr?'var(--danger)':'var(--accent)';
-  setTimeout(function(){f.textContent='';},4000);
-}
 
 function showReview(store, dateStr, items, totalInput) {
   // We no longer close the scanner, we just switch to the review step inside the same modal
