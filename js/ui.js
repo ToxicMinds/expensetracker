@@ -1025,7 +1025,8 @@ async function executeAuth(mode) {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          // Explicitly clean the origin to prevent 'improperly formatted' errors
+          redirectTo: window.location.origin.replace(/\/$/, "").trim()
         }
       });
       if (error) throw error;
