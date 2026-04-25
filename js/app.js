@@ -8,6 +8,10 @@ async function init() {
   const bootPromise = sysBootSupabase();
   const authPromise = (async () => {
     await bootPromise; 
+    // Wait slightly if there's a hash to allow Supabase SDK to parse it
+    if (window.location.hash.indexOf('access_token') > -1) {
+      await new Promise(r => setTimeout(r, 250));
+    }
     return supabaseClient.auth.getSession();
   })();
 
@@ -92,6 +96,13 @@ async function init() {
      SECURITY & AUTH LISTENERS
   ═══════════════════════════════════════════════ */
   supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      // If we're stuck on the auth modal, close it and try to proceed
+      const authModal = document.getElementById('auth-modal');
+      if (authModal && authModal.classList.contains('open')) {
+        location.reload(); // Refreshing is the safest way to reset app state with new session
+      }
+    }
     if (event === 'SIGNED_OUT') {
       location.reload();
     }
