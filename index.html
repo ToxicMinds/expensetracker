@@ -87,12 +87,22 @@
     <div id="ob-step-1" class="ob-step active">
       <div style="font-size:40px; margin-bottom:10px;">🏠</div>
       <div class="mtitle">Welcome!</div>
-      <div class="msub">Let's set up your new household.</div>
-      <input type="text" id="ob-hname" placeholder="Name your household (e.g. The Smiths)" style="width:100%; text-align:center; margin: 1.5rem 0">
-      <button class="btn btn-p" style="width:100%" onclick="nextOB(2)">Next: Members</button>
+      <div class="msub">How would you like to get started?</div>
+      <button class="btn btn-p" style="width:100%; margin: 1.5rem 0 0.5rem 0" onclick="nextOB(2)">Create New Household</button>
+      <div class="or-row">OR</div>
+      <button class="btn btn-g" style="width:100%; margin-top:0.5rem" onclick="nextOB(4)">Join Existing Household</button>
     </div>
 
     <div id="ob-step-2" class="ob-step" style="display:none">
+      <div style="font-size:40px; margin-bottom:10px;">🏘️</div>
+      <div class="mtitle">Name your Household</div>
+      <div class="msub">e.g. "The Smith Family" or "Nikhil & Zuzana"</div>
+      <input type="text" id="ob-hname" placeholder="Name your household" style="width:100%; text-align:center; margin: 1.5rem 0">
+      <button class="btn btn-p" style="width:100%" onclick="nextOB(3)">Next: Members</button>
+      <button class="btn btn-g" style="width:100%; margin-top:10px" onclick="nextOB(1)">Back</button>
+    </div>
+
+    <div id="ob-step-3" class="ob-step" style="display:none">
       <div style="font-size:40px; margin-bottom:10px;">👥</div>
       <div class="mtitle">Family Members</div>
       <div class="msub">Add who will be tracking expenses.</div>
@@ -102,18 +112,27 @@
         </div>
       </div>
       <button class="btn" style="width:100%; margin-bottom:10px; border:1px dashed var(--border)" onclick="addOBMember()">+ Add Member (Up to 4)</button>
-      <button class="btn btn-p" style="width:100%" onclick="nextOB(3)">Next: Language</button>
+      
+      <div style="margin-bottom:1.5rem">
+        <div class="fl">Language</div>
+        <select id="ob-lang" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background:var(--bg)">
+          <option value="en">English</option>
+          <option value="sk">Slovenčina</option>
+        </select>
+      </div>
+      
+      <button class="btn btn-p" style="width:100%" onclick="finishOB()">Complete Setup</button>
+      <button class="btn btn-g" style="width:100%; margin-top:10px" onclick="nextOB(2)">Back</button>
     </div>
 
-    <div id="ob-step-3" class="ob-step" style="display:none">
-      <div style="font-size:40px; margin-bottom:10px;">🌐</div>
-      <div class="mtitle">Preferences</div>
-      <div class="msub">Choose your primary language.</div>
-      <select id="ob-lang" style="width:100%; margin: 1.5rem 0; padding:12px; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text)">
-        <option value="en">English (Default)</option>
-        <option value="sk">Slovenčina (Slovak)</option>
-      </select>
-      <button class="btn btn-p" style="width:100%" onclick="finishOB()">Complete Setup</button>
+    <div id="ob-step-4" class="ob-step" style="display:none">
+      <div style="font-size:40px; margin-bottom:10px;">🔗</div>
+      <div class="mtitle">Join a Household</div>
+      <div class="msub">Enter the Household ID shared with you.</div>
+      <input type="text" id="ob-join-id" placeholder="Paste Household ID (UUID)" style="width:100%; text-align:center; margin: 1.5rem 0; font-family:var(--mono); font-size:12px">
+      <div id="ob-join-err" style="color:var(--danger); font-size:12px; margin-top:-10px; margin-bottom:15px"></div>
+      <button class="btn btn-p" style="width:100%" onclick="joinHousehold()">Join Now</button>
+      <button class="btn btn-g" style="width:100%; margin-top:10px" onclick="nextOB(1)">Back</button>
     </div>
   </div>
 </div>
@@ -271,6 +290,14 @@
       <option value="en">English</option>
       <option value="sk">Slovenčina</option>
     </select>
+  </div>
+
+  <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border)">
+    <div class="fl">Household ID (Share this for others to join)</div>
+    <div style="display:flex; gap:8px">
+      <input type="text" id="set-h-id" readonly style="background:var(--bg); font-family:var(--mono); font-size:11px; flex:1">
+      <button class="btn btn-g" onclick="copyHID()" style="white-space:nowrap; width:auto; padding:0 12px">Copy</button>
+    </div>
   </div>
 
   <button class="btn btn-p" onclick="saveSettings()" style="width:100%; margin-top:1.5rem">Save & Sync Settings</button>

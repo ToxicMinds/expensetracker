@@ -1140,6 +1140,48 @@ async function finishOB() {
   }
 }
 
+async function joinHousehold() {
+  const id = document.getElementById('ob-join-id').value.trim();
+  const err = document.getElementById('ob-join-err');
+  if (!id) { err.textContent = 'Please paste a valid ID'; return; }
+  
+  setSyncing('s');
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) throw new Error("No active session");
+    
+    // 1. Verify household exists
+    const { data: house, error: hErr } = await supabaseClient
+      .from('households')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+      
+    if (hErr || !house) throw new Error("Household ID not found or invalid.");
+    
+    // 2. Link user to this household
+    const { error: linkErr } = await supabaseClient
+      .from('app_users')
+      .insert({ id: session.user.id, household_id: id });
+      
+    if (linkErr) throw linkErr;
+    
+    HOUSEHOLD_ID = id;
+    document.getElementById('onboarding-modal').classList.remove('open');
+    location.reload();
+  } catch(e) {
+    err.textContent = e.message;
+    setSyncing('e');
+  }
+}
+
+function copyHID() {
+  const inp = document.getElementById('set-h-id');
+  inp.select();
+  document.execCommand('copy');
+  flash('Household ID copied to clipboard!');
+}
+
 async function provisionHousehold(name) {
   if (!supabaseClient) throw new Error("Storage engine not ready");
   
@@ -1251,6 +1293,9 @@ function toggleTheme() {
 async function openSettings() {
   document.getElementById('nav-modal')?.classList.add('open');
   document.getElementById('settings-modal').classList.add('open');
+  if (document.getElementById('set-h-id')) {
+    document.getElementById('set-h-id').value = HOUSEHOLD_ID || '';
+  }
   applyNamesUI();
   renderSettingsRules();
   renderBudgetsGrid();
