@@ -1,18 +1,16 @@
 # Technical Debt Log
 
-## DEBT-001: No Data Validation Middleware
+## DEBT-001: Data Validation Middleware [COMPLETED]
 **Component**: `js/state.js`
 **Issue**: Supabase CRUD assumes success; no validation on write.
-**Risk**: Corrupted invoice-expense links if network fails mid-insert.
-**Mitigation**: Add transaction-like wrapper for multi-insert operations.
-**Priority**: HIGH (post-v1 critical)
+**Status**: Fixed via `validateRow()` in `state.js`.
+**Priority**: HIGH
 
-## DEBT-002: No Audit Log for Data Changes
+## DEBT-002: Audit Log for Data Changes [COMPLETED]
 **Component**: Database
 **Issue**: Can't trace who changed what when.
-**Risk**: If data corruption occurs, no trail to investigate.
-**Mitigation**: Add `audit_log` table with triggers on expenses/invoices.
-**Priority**: MEDIUM (nice-to-have for compliance)
+**Status**: SQL Migration created in `sql/audit_logs.sql`.
+**Priority**: MEDIUM
 
 ## DEBT-003: God File Pattern
 **Component**: `js/ui.js`

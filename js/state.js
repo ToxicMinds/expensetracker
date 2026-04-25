@@ -204,6 +204,15 @@ function sbH(extra) {
   if (extra) Object.keys(extra).forEach(function(k){h[k]=extra[k];});
   return h;
 }
+
+function validateRow(row) {
+  if (!row.date) throw new Error("Date is required");
+  if (!row.amount || isNaN(row.amount)) throw new Error("Valid amount is required");
+  if (!row.category || !CATS.includes(row.category)) throw new Error("Valid category is required (" + row.category + ")");
+  if (!row.who) throw new Error("Payer is required");
+  if (!row.id) row.id = uid();
+  return true;
+}
 async function sbSelect() {
   dbg('Supabase SELECT', {}, true);
   // OPTIMIZATION: Only load last 4 months initially to keep login fast.
@@ -219,6 +228,7 @@ async function sbSelect() {
 }
 async function sbInsert(row) {
   row.household_id = HOUSEHOLD_ID;
+  validateRow(row);
   dbg('INSERT expense (invoice_id=' + (row.invoice_id || 'null') + ') id='+row.id, row, true);
   var r = await fetch(REST, {method:'POST', headers:sbH({'Prefer':'return=minimal'}), body:JSON.stringify(row)});
   var b = await r.text();
@@ -246,6 +256,7 @@ async function sbDelete(id) {
   if (!r.ok) throw new Error('Delete failed '+r.status+': '+b.slice(0,300));
 }
 async function sbUpdate(id, row) {
+  validateRow(row);
   dbg('UPDATE id='+id, row, true);
   var r = await fetch(REST+'?id=eq.'+encodeURIComponent(id)+'&household_id=eq.'+HOUSEHOLD_ID, {
     method:'PATCH', headers:sbH({'Prefer':'return=minimal'}), body:JSON.stringify(row)
