@@ -9,57 +9,50 @@
  */
 async function executeAuth(mode) {
   var err = document.getElementById('auth-error');
-  var codeInp = document.getElementById('auth-code')?.value?.trim();
-  
-  if (mode === 'unified') {
-    if (!codeInp) { 
-      err.textContent = 'Please enter a PIN or Handle'; 
-      return; 
-    }
+  if (err) err.textContent = '';
+
+  if (mode === 'pin') {
+    var pin = document.getElementById('auth-pin')?.value?.trim();
+    if (!pin) { err.textContent = 'Please enter your PIN'; return; }
     
-    // 1. LEGACY 4-DIGIT PIN (Bridge to /api/pin-auth)
-    if (/^\d{4}$/.test(codeInp)) {
-      err.style.color = 'var(--nikhil)';
-      err.textContent = 'Unlocking family household...';
-      try {
-        const res = await fetch('/api/pin-auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: codeInp })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'PIN validation failed');
+    err.style.color = 'var(--nikhil)';
+    err.textContent = 'Unlocking family household...';
+    try {
+      const res = await fetch('/api/pin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'PIN validation failed');
 
-        await supabaseClient.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token
-        });
-        window.location.reload();
-      } catch (e) {
-        err.style.color = 'var(--danger)';
-        err.textContent = e.message;
-      }
-      return;
+      await supabaseClient.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token
+      });
+      window.location.reload();
+    } catch (e) {
+      err.style.color = 'var(--danger)';
+      err.textContent = e.message;
     }
+    return;
+  }
 
-    // 2. HANDLE ENTRY
-    // Check if it exists and then prompt Google login to link identity
+  if (mode === 'handle') {
+    var handle = document.getElementById('auth-handle')?.value?.trim();
+    if (!handle) { err.textContent = 'Please enter a handle'; return; }
+    
     err.style.color = 'var(--accent)';
     err.textContent = 'Checking handle...';
     try {
-       // Search case-insensitively for handles
-       const lowerCode = codeInp.toLowerCase();
+       const lowerCode = handle.toLowerCase();
        const { data, error } = await supabaseClient.rpc('verify_household_access', { input_code: lowerCode });
        
-       if (error) {
-         console.error("Auth lookup failed:", error);
-         throw new Error("Could not verify handle. Ensure database migration is applied.");
-       }
-       
-       if (!data || data.length === 0) throw new Error("Invalid code or handle.");
+       if (error) throw new Error("Could not verify handle.");
+       if (!data || data.length === 0) throw new Error("Invalid handle.");
        
        err.textContent = "Household found! Please sign in with Google to continue.";
-       localStorage.setItem('pending_join_handle', codeInp);
+       localStorage.setItem('pending_join_handle', lowerCode);
        setTimeout(() => executeAuth('google'), 1500);
     } catch(e) {
        err.style.color = 'var(--danger)';

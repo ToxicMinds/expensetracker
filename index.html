@@ -45,25 +45,36 @@
     <div class="mtitle" style="margin-bottom:6px">ET Expense Tracker</div>
     <div class="msub" style="margin-bottom:1.5rem">Unlock your pot of gold</div>
     
-    <!-- Unified Access: PIN or Handle -->
-    <form onsubmit="event.preventDefault(); executeAuth('unified')" style="background:var(--nikhil-light); border:1px solid var(--nikhil); border-radius:var(--r); padding:1.5rem 1rem; margin-bottom:20px;">
-      <div style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--nikhil); letter-spacing:0.1em; margin-bottom:12px;">🔑 Access Code</div>
-      <input type="text" id="auth-code" placeholder="PIN or Handle" autofocus style="width:100%; text-align:center; font-size:20px; font-family:var(--mono); margin-bottom:12px; border-color:var(--nikhil);">
-      <button type="submit" class="btn btn-p" style="width:100%; margin-top:0; background:var(--nikhil)">Enter Household</button>
-    </form>
+    <!-- Option 1: Numeric PIN (Primary for Zuzana/Nikhil) -->
+    <div id="auth-pin-section">
+      <div style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--nikhil); letter-spacing:0.1em; margin-bottom:8px;">🔢 Household PIN</div>
+      <input type="password" id="auth-pin" inputmode="numeric" pattern="[0-9]*" placeholder="••••" autofocus 
+             style="width:100%; text-align:center; font-size:32px; font-family:var(--mono); margin-bottom:12px; border:2px solid var(--nikhil); border-radius:12px; letter-spacing:8px">
+      <button class="btn btn-p" style="width:100%; margin-top:0; background:var(--nikhil)" onclick="executeAuth('pin')">Unlock Household</button>
+    </div>
 
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px">
+    <div style="display:flex; align-items:center; gap:10px; margin: 20px 0">
       <hr style="flex:1; border:none; border-top:1px solid var(--border)">
-      <span style="font-size:11px; color:var(--muted)">OR SIGN IN WITH</span>
+      <span style="font-size:11px; color:var(--muted)">OR</span>
       <hr style="flex:1; border:none; border-top:1px solid var(--border)">
     </div>
 
+    <!-- Option 2: Google Sign In -->
     <button class="btn btn-g" onclick="executeAuth('google')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; border:1px solid var(--border)">
       <img src="https://www.google.com/favicon.ico" width="16" height="16">
-      <span>Google Account</span>
+      <span>Sign in with Google</span>
     </button>
 
-    <div id="auth-error" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:10px;"></div>
+    <!-- Option 3: Handle (Hidden/Advanced) -->
+    <div style="margin-top:15px">
+      <a href="#" style="font-size:11px; color:var(--muted); text-decoration:none" onclick="document.getElementById('auth-handle-section').style.display='block'; this.style.display='none'">Join with Household Handle?</a>
+      <div id="auth-handle-section" style="display:none; margin-top:10px; padding:10px; background:var(--bg-muted); border-radius:8px">
+        <input type="text" id="auth-handle" placeholder="e.g. shanbhag-26" style="width:100%; text-align:center; font-size:14px; margin-bottom:8px">
+        <button class="btn btn-g" style="width:100%; font-size:11px; padding:6px" onclick="executeAuth('handle')">Check Handle</button>
+      </div>
+    </div>
+
+    <div id="auth-error" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:15px;"></div>
   </div>
 </div>
 
