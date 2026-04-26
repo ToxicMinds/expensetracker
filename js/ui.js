@@ -155,21 +155,7 @@ function renderQuickEntry() {
   `;
 }
 
-function checkEkasa(b64, mime) {
-  /* Attempting to parse QR string structure */
-  var txt = '';
-  try { txt = atob(b64); } catch(e) {}
-  
-  /* Standard eKasa O-XXXXXX... pattern */
-  var m = txt.match(/O-[0-9A-F]{32}/i);
-  if (m) return m[0];
-  
-  /* Specific SK Financna Sprava URL pattern */
-  var mUrl = txt.match(/id=([0-9A-F]{32})/i) || txt.match(/O-[0-9A-F]{32}/i);
-  if (mUrl && mUrl[1]) return 'O-'+mUrl[1];
-  
-  return null;
-}
+// checkEkasa → moved to ui-scanner.js
 
 /* ═══════════════════════════════════════════════
    UI & RENDER
@@ -534,75 +520,10 @@ function renderCards(){
   updateCharts(userSpend, calcCategoryTotals(all));
 }
 
-function catsObj(all) {
-  var c={};
-  all.forEach(function(e){c[e.category]=(c[e.category]||0)+Number(e.amount);});
-  return c;
-}
+// catsObj, chartUsers, chartCats, updateCharts → moved to ui-charts.js
 
-let chartUsers = null;
-let chartCats = null;
+// updateCharts → moved to ui-charts.js
 
-function updateCharts(userSpend, catTotals) {
-  const ctxU = document.getElementById('chart-users');
-  const ctxC = document.getElementById('chart-categories');
-  if(!ctxU || !ctxC || typeof Chart === 'undefined') return;
-  
-  const isDark = document.body.getAttribute('data-theme') === 'dark';
-  Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
-  Chart.defaults.font.family = "'Outfit', sans-serif";
-
-  const userKeys = Object.keys(NAMES);
-  const labels = userKeys.map(k => NAMES[k]);
-  const data = userKeys.map(k => userSpend[k] || 0);
-
-  if(chartUsers) chartUsers.destroy();
-  chartUsers = new Chart(ctxU, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: data,
-        backgroundColor: ['#8b5cf6', '#ec4899', '#3b82f6', '#f59e0b'],
-        borderWidth: 0,
-        cutout: '70%'
-      }]
-    },
-    options: { 
-      responsive: true, 
-      maintainAspectRatio: false, 
-      plugins: { 
-        legend: { position: 'bottom' },
-        title: { display: true, text: t('Spent by User'), font: { size: 14 } }
-      } 
-    }
-  });
-
-  const catLabels = Object.keys(catTotals).filter(k => catTotals[k] > 0);
-  const catData = catLabels.map(k => catTotals[k]);
-
-  if(chartCats) chartCats.destroy();
-  chartCats = new Chart(ctxC, {
-    type: 'bar',
-    data: {
-      labels: catLabels,
-      datasets: [{
-        label: t('Spent'),
-        data: catData,
-        backgroundColor: '#3b82f6',
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, grid: { color: isDark ? '#334155' : '#e2e8f0' } },
-        x: { grid: { display: false } }
-      }
-    }
-  });
-}
 
 function renderBudget(){
   var cats={};
@@ -745,85 +666,14 @@ function exportCSV() {
 }
 
 
-function showReview(store, dateStr, items, totalInput) {
-  // We no longer close the scanner, we just switch to the review step inside the same modal
-  showStep('step-review');
-  
-  var storeEl = document.getElementById('r-store');
-  if (storeEl) storeEl.textContent = store;
-  
-  var dateEl = document.getElementById('sdate');
-  if (dateEl) dateEl.value = dateStr || today();
-  
-  var totalEl = document.getElementById('r-total');
-  if (totalEl) totalEl.textContent = totalInput ? 'Total: €' + fmt(totalInput) : 'Total: Auto';
-  
-  var list = document.getElementById('r-items');
-  if (!list) return;
-  
-  if (!items || !items.length) {
-    list.innerHTML = '<div class="te" style="padding:20px;color:var(--muted)">No items extracted.</div>';
-    return;
-  }
-  
-  list.innerHTML = items.map(function(it, i) {
-    var catOpts = getCategoryOptions(it.category);
-    
-    return '<div class="pitem">' +
-      '<input type="checkbox" id="rcb_' + i + '" checked style="width:20px;height:20px">' +
-      '<div class="pinm" style="flex:1;font-size:13px">' + esc(it.name) + '</div>' +
-      '<div class="picat"><select id="rcat_' + i + '" style="font-size:11px;padding:2px">' + catOpts + '</select></div>' +
-      '<div class="piam" style="font-family:var(--mono);width:60px;text-align:right">€' + fmt(it.amount) + 
-      '<input type="hidden" id="ramt_' + i + '" value="' + it.amount + '">' +
-      '</div>' +
-      '<input type="hidden" id="rnm_' + i + '" value="' + esc(it.name) + '">' +
-      '</div>';
-  }).join('');
-}
-function cancelReview() { closeScanner(); }
+// showReview, cancelReview, openScanner, closeScanner, showStep, showEkasaStatus → moved to ui-scanner.js
 
 /* ═══════════════════════════════════════════════
    SETTINGS & MODALS
 ═══════════════════════════════════════════════ */
-function openSettings() {
-  // Merged into the lower declaration at line 1283
-  return;
-}
-
 function closeSettings() {
   document.getElementById('nav-modal')?.classList.remove('open');
   document.getElementById('settings-modal')?.classList.remove('open');
-}
-
-function openScanner() {
-  document.getElementById('scan-modal').classList.add('open');
-  document.getElementById('sdate').value = today();
-  
-  // Ensure the scanner user toggles are correctly rendered
-  applyNamesUI();
-  
-  showStep('step-qr');
-  startQRCamera();
-}
-
-function closeScanner() {
-  stopQRCamera();
-  document.getElementById('scan-modal').classList.remove('open');
-}
-
-function showStep(id) {
-  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
-  var el = document.getElementById(id);
-  if (el) el.classList.add('active');
-  else dbg('UI Warning: step not found: '+id, true);
-}
-
-function showEkasaStatus(type, title, desc) {
-  var b = document.getElementById('ekasa-status');
-  if (!b) return;
-  b.className = 'status-box ' + type;
-  b.innerHTML = '<div class="sb-title">' + esc(title) + '</div><div>' + esc(desc) + '</div>';
-  if(type==='info') b.insertAdjacentHTML('afterbegin','<div style="text-align:center;margin-bottom:10px"><span class="spin"></span></div>');
 }
 
 function openInsights() {
@@ -877,131 +727,10 @@ function renderGoals() {
   }).join('');
 }
 
-function renderSettingsRules() {
-  var el = document.getElementById('set-rules-list');
-  if(!el) return;
-  el.innerHTML = RULES.map(function(r) {
-    return '<div class="rule-row"><div class="rule-pat">"'+esc(r.pattern)+'"</div><div class="rule-arr">→</div><div class="rule-cat">'+esc(r.category)+'</div>'+
-           '<button class="db" onclick="deleteRule(\''+r.id+'\')">×</button></div>';
-  }).join('');
-}
+// renderSettingsRules, renderBankSync, renderBudgetsGrid, openBankPicker,
+// connectGoogleCalendar, disconnectGoogleCalendar, syncToGCal, syncAllToGCal,
+// renderIntegrations, openSettings, closeSettings → moved to ui-settings.js
 
-function renderBankSync() {
-  var el = document.getElementById('bank-sync-list');
-  var bList = document.getElementById('bank-connections-list');
-  if(!el) return;
-  
-  if (BANKS.length === 0) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--muted)">No banks connected. Open ⚙️ Settings → Bank Connections.</div>';
-    if(bList) bList.innerHTML = '<div style="font-size:13px;color:var(--muted)">No banks connected.</div>';
-    return;
-  }
-  
-  var html = BANKS.map(function(b) {
-    return '<div class="bank-item"><div class="bank-info"><div class="bank-name">'+esc(b.name)+'</div><div class="bank-status ok">Connected • '+b.accounts.length+' accounts</div></div>'+
-           '<button class="db" onclick="syncBank(\''+b.requisition_id+'\')" title="Sync transactions">🔄</button>'+
-           '</div>';
-  }).join('');
-  el.innerHTML = html;
-  
-  if(bList) {
-    bList.innerHTML = BANKS.map(function(b) {
-      return '<div class="bank-item"><div class="bank-info"><div class="bank-name">'+esc(b.name)+'</div><div class="bank-status ok">Connected on '+b.linked_at+'</div></div></div>';
-    }).join('');
-  }
-}
-
-function renderBudgetsGrid() {
-  var grid = document.getElementById('set-budgets-grid');
-  if(!grid) return;
-  grid.innerHTML = '';
-  CATS.forEach(function(c, idx) {
-    grid.innerHTML += '<div class="fg" style="margin-bottom:0"><div class="fl" style="display:flex;justify-content:space-between"><span>'+esc(c)+' (€)</span><button onclick="delCategory(\''+esc(c)+'\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1">&#x2715;</button></div><input type="number" id="bc_'+c+'" value="'+(BUDGETS[c]||0)+'" min="0" step="1" data-cat="'+esc(c)+'"></div>';
-  });
-}
-
-
-
-function openBankPicker() {
-  document.getElementById('bank-picker-modal').classList.add('open');
-  loadBanks();
-}
-
-function connectGoogleCalendar() {
-  window.location.href = '/api/google-calendar?action=auth';
-}
-function disconnectGoogleCalendar() {
-  if(!confirm('Disconnect Google Calendar? Sync will stop.')) return;
-  GCAL.enabled = false;
-  GCAL.token = null;
-  localStorage.setItem('sf_gcal', JSON.stringify(GCAL));
-  sbSaveState().catch(function(){});
-  renderIntegrations();
-}
-
-async function syncToGCal(expense) {
-  if (!GCAL || !GCAL.enabled || !GCAL.token) return;
-  
-  try {
-    const res = await fetch('/api/google-calendar?action=sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: GCAL.token, expense: expense })
-    });
-    const data = await res.json();
-    if (data.new_token) {
-       GCAL.token = data.new_token;
-       localStorage.setItem('sf_gcal', JSON.stringify(GCAL));
-       sbSaveState().catch(function(){});
-    }
-  } catch(e) {
-    console.error("GCal sync failed", e);
-  }
-}
-
-async function syncAllToGCal() {
-  if (!GCAL || !GCAL.enabled || !GCAL.token) {
-    flash("Connect Google Calendar first", true);
-    return;
-  }
-  
-  if (!confirm(`Sync all ${expenses.length} expenses to your calendar? (This will cause significant "clutter" as requested!)`)) return;
-  
-  const status = document.getElementById('gcal-status');
-  status.textContent = "Syncing... 0%";
-  
-  // Clone to avoid mutation
-  const toSync = [...expenses];
-  let success = 0;
-  
-  for (let i = 0; i < toSync.length; i++) {
-    await syncToGCal(toSync[i]);
-    success++;
-    status.textContent = `Syncing... ${Math.round((success / toSync.length) * 100)}%`;
-    if (i % 5 === 0) await new Promise(r => setTimeout(r, 100));
-  }
-  
-  status.textContent = "Sync Complete!";
-  flash(`Successfully pushed ${success} items to Calendar`, false);
-  setTimeout(() => { status.textContent = ""; }, 5000);
-}
-
-function renderIntegrations() {
-  var btn = document.getElementById('btn-gcal-connect');
-  if(!btn) return;
-  
-  if (GCAL && GCAL.enabled) {
-    btn.textContent = 'Connected (Disconnect)';
-    btn.style.background = 'var(--bg)';
-    btn.style.color = 'var(--text)';
-    btn.onclick = disconnectGoogleCalendar;
-  } else {
-    btn.textContent = 'Connect';
-    btn.style.background = 'var(--nikhil-light)';
-    btn.style.color = 'var(--nikhil)';
-    btn.onclick = connectGoogleCalendar;
-  }
-}
 
 /* ═══════════════════════════════════════════════
    AUTHENTICATION LOGIC
@@ -1124,263 +853,18 @@ async function openSettings() {
   await renderRecurring();
 }
 
-async function renderRecurring() {
-  const list = document.getElementById('set-recurring-list');
-  if (!list) return;
-  list.innerHTML = '<span class="spin"></span>';
-  
-  const recs = await sbSelectRecurring();
-  if (recs.length === 0) {
-    list.innerHTML = '<div style="font-size:12px; color:var(--muted)">No recurring bills added.</div>';
-    return;
-  }
-  
-  list.innerHTML = recs.map(r => `
-    <div class="bank-item">
-      <div class="bank-info">
-        <div class="bank-name">${esc(r.name)}</div>
-        <div class="bank-status">€${r.amount} - ${r.category} - Day ${r.day_of_month} (${r.who})</div>
-      </div>
-      <button class="db db-del" onclick="deleteRecurringUI('${r.id}')">&times;</button>
-    </div>
-  `).join('');
-}
+// renderRecurring, addRecurringUI, deleteRecurringUI → moved to ui-recurring.js
 
-async function addRecurringUI() {
-  const name = prompt("Bill Name (e.g. Netflix):");
-  if (!name) return;
-  const amt = prompt("Amount (€):", "15.00");
-  const cat = prompt("Category:", "Entertainment");
-  const day = prompt("Day of Month (1-31):", "1");
-  const who = prompt("Who pays? (e.g. Nik):", NAMES.u1 || "You");
-  
-  try {
-    await sbSaveRecurring({
-      name,
-      amount: parseFloat(amt),
-      category: cat,
-      day_of_month: parseInt(day),
-      who
-    });
-    renderRecurring();
-    renderCards();
-  } catch(e) { flash("Failed to save recurring bill", true); }
-}
 
-async function deleteRecurringUI(id) {
-  if (!confirm("Delete this recurring bill?")) return;
-  await sbDeleteRecurring(id);
-  renderRecurring();
-  renderCards();
-}
+// openAnalyzer, closeAnalyzer, onStatementFileSelect, processStatementAI,
+// confirmAnalyzerResults, analyzedTransactions → moved to ui-analyzer.js
 
-/* ═══════════════════════════════════════════════
-   AI STATEMENT ANALYZER UI
-═══════════════════════════════════════════════ */
-let analyzedTransactions = [];
-
-function openAnalyzer() {
-  document.getElementById('analyzer-modal').classList.add('open');
-}
-function closeAnalyzer() {
-  document.getElementById('analyzer-modal').classList.remove('open');
-  document.getElementById('analyzer-results').style.display = 'none';
-  document.getElementById('analyzer-input').value = '';
-}
-
-function onStatementFileSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    document.getElementById('analyzer-input').value = evt.target.result;
-    flash("File loaded into analyzer!");
-  };
-  reader.readAsText(file);
-}
-
-async function processStatementAI() {
-  const text = document.getElementById('analyzer-input').value.trim();
-  if (!text) { flash("Please paste transactions or upload a file", true); return; }
-  
-  const btn = document.getElementById('lbl-btn-analyze');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Analyzing...';
-  
-  try {
-    // Process via Groq AI
-    analyzedTransactions = await aiProcessBulkTransactions(text);
-    
-    document.getElementById('analyzer-results').style.display = 'block';
-    const list = document.getElementById('analyzer-list');
-    list.innerHTML = analyzedTransactions.map((t, idx) => `
-      <div class="pitem">
-        <input type="checkbox" checked id="ana-${idx}">
-        <div class="pinm">
-          <strong>${t.description}</strong><br>
-          <small>${t.date} | ${t.who}</small>
-        </div>
-        <div class="piam">€${t.amount}</div>
-        <div class="picat">
-          <select id="ana-cat-${idx}">
-            ${CATS.map(c => `<option ${c===t.category ? 'selected' : ''}>${c}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-    `).join('');
-    
-  } catch(e) {
-    flash("AI Analysis failed: " + e.message, true);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Analyze with Groq AI";
-  }
-}
-
-async function confirmAnalyzerResults() {
-  const toSave = [];
-  analyzedTransactions.forEach((t, idx) => {
-    if (document.getElementById(`ana-${idx}`).checked) {
-      t.category = document.getElementById(`ana-cat-${idx}`).value;
-      toSave.push(t);
-    }
-  });
-  
-  if (toSave.length === 0) return;
-  
-  flash(`Importing ${toSave.length} transactions...`);
-  for (const t of toSave) {
-    await sbInsert(t);
-  }
-  
-  closeAnalyzer();
-  renderAll();
-  flash("Successfully imported all verified transactions!", false);
-}
 
 /* ═══════════════════════════════════════════════
    ADVANCED ANALYTICS (ROADMAP PHASE 3)
 ═══════════════════════════════════════════════ */
-let chartTrends, chartRadar;
+// renderTrends, renderRadar, renderHeatmap, chartTrends, chartRadar → moved to ui-charts.js
 
-function renderTrends() {
-  const ctx = document.getElementById('chart-trends')?.getContext('2d');
-  if (!ctx || typeof Chart === 'undefined') return;
-
-  const labels = [];
-  const spendData = [];
-  const incomeData = [];
-
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const mStr = d.toISOString().slice(0, 7);
-    labels.push(d.toLocaleString(LANG === 'sk' ? 'sk-SK' : 'en-US', { month: 'short' }));
-    
-    const mExpenses = expenses.filter(e => e.date && e.date.startsWith(mStr));
-    const mTotal = mExpenses.reduce((s, e) => s + Number(e.amount), 0);
-    spendData.push(mTotal);
-    
-    incomeData.push(Object.values(INCOME).reduce((a, b) => a + Number(b), 0));
-  }
-
-  if (chartTrends) chartTrends.destroy();
-  chartTrends = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: t('Spent'),
-          data: spendData,
-          borderColor: '#8b5cf6',
-          backgroundColor: 'rgba(139, 92, 246, 0.1)',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointBackgroundColor: '#8b5cf6'
-        },
-        {
-          label: t('Income') || 'Income',
-          data: incomeData,
-          borderColor: '#0ea5e9',
-          borderDash: [5, 5],
-          tension: 0,
-          fill: false,
-          borderWidth: 2
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          suggestedMax: Math.max(...spendData, ...incomeData) * 1.2,
-          ticks: { callback: v => '€' + v }
-        }
-      },
-      plugins: {
-        legend: { position: 'bottom' }
-      }
-    }
-  });
-}
-
-function renderRadar() {
-  const ctx = document.getElementById('chart-radar')?.getContext('2d');
-  if (!ctx || typeof Chart === 'undefined') return;
-
-  const catTotals = {};
-  const m = curMonth();
-  expenses.filter(e => e.date && e.date.startsWith(m)).forEach(e => {
-    catTotals[e.category] = (catTotals[e.category] || 0) + Number(e.amount);
-  });
-
-  const labels = CATS;
-  const data = labels.map(c => catTotals[c] || 0);
-
-  if (chartRadar) chartRadar.destroy();
-  chartRadar = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: t('Category Concentration'),
-        data: data,
-        backgroundColor: 'rgba(79, 70, 229, 0.4)',
-        borderColor: '#4f46e5',
-        borderWidth: 2,
-        pointBackgroundColor: '#4f46e5',
-        pointRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        r: {
-          beginAtZero: true,
-          grid: { color: 'rgba(0,0,0,0.05)' },
-          angleLines: { color: 'rgba(0,0,0,0.05)' },
-          ticks: { display: false },
-          pointLabels: {
-            font: { size: 12, weight: '600' }
-          }
-        }
-      },
-      plugins: {
-        legend: { display: false }
-      }
-    }
-  });
-}
-
-function renderHeatmap() {
-  // Logic merged into renderCalendar
-}
 
 async function logout() {
   if (!confirm("Are you sure you want to log out?")) return;

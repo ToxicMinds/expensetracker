@@ -2,33 +2,24 @@
 
 ## DEBT-001: Data Validation Middleware [COMPLETED]
 **Component**: `js/state.js`
-**Issue**: Supabase CRUD assumes success; no validation on write.
-**Status**: Fixed via `validateRow()` in `state.js`.
-**Priority**: HIGH
+**Status**: Fixed via `validateRow()`.
 
 ## DEBT-002: Audit Log for Data Changes [COMPLETED]
 **Component**: Database
-**Issue**: Can't trace who changed what when.
-**Status**: SQL Migration created in `sql/audit_logs.sql`.
-**Priority**: MEDIUM
+**Status**: Fixed via `sql/audit_logs.sql` and UUID-to-Text patch.
 
 ## DEBT-003: God File Pattern
 **Component**: `js/ui.js`
-**Issue**: File is 57KB and handles rendering, logic, and API calls.
-**Risk**: High maintenance cost, difficult to debug, tight coupling.
-**Mitigation**: Split into component-based modules (`render.js`, `handlers.js`).
-**Priority**: HIGH
+**Issue**: File is 60KB and handles everything.
+**Status**: IN PROGRESS (Starting Surgical Split: `ui-scanner.js`, `ui-charts.js`).
+**Priority**: CRITICAL
 
-## DEBT-004: DRY Violation in Category Management
+## DEBT-004: DRY Violation in Category Management [COMPLETED]
 **Component**: `index.html`, `js/state.js`, `js/ui.js`
-**Issue**: Category lists are hardcoded in multiple files.
-**Risk**: UI inconsistency when adding/removing categories.
-**Mitigation**: Centralize categories in `state.js` and populate UI dynamically.
-**Priority**: MEDIUM
+**Status**: Fixed via `ensureCategory()` and `datalist` implementation.
 
 ## DEBT-005: String-based HTML Template Injection
 **Component**: `js/ui.js`
 **Issue**: UI is built using string concatenation.
-**Risk**: XSS vulnerabilities and difficult layout maintenance.
-**Mitigation**: Move to a template-based system or use DocumentFragment.
+**Status**: IN PROGRESS (Moving to Template Literals during modularization).
 **Priority**: MEDIUM

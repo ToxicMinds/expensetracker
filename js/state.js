@@ -192,6 +192,9 @@ var currentWhoId = 'u1';
 var who  = NAMES.u1;
 var swho = '';
 var busy = false;
+/* stateReady is set to true by init() in app.js AFTER household config is loaded.
+   No module should call sbSaveState() before this is true. */
+var stateReady = false;
 var qrStream    = null;
 var qrInterval  = null;
 var qrCanvas    = null;
@@ -290,6 +293,7 @@ async function sbLoadState() {
   return null;
 }
 async function sbSaveState() {
+  if (!stateReady) { dbg('sbSaveState skipped: state not ready yet', {}, false); return; }
   dbg('Supabase SAVE STATE', {}, true);
   var configObj = {
     names: NAMES, income: INCOME, budgets: BUDGETS,

@@ -83,6 +83,7 @@ async function init() {
     } else {
       await sbSaveState();
     }
+    stateReady = true; // Phase 1: state is now safe to persist
 
     // Parallel load expenses and recurring bills
     const [expList] = await Promise.all([

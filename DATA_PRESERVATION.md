@@ -1,31 +1,37 @@
 # Data Preservation Strategy
 
-## Pre-Migration State
-- **Expense Count**: 40
-- **Date Range**: 2026-04-06 to 2026-04-16
-- **Categories**: Groceries, Health, Kids, Other, Pets, Clothing, Dining out, Z-Bottles, Utilities, Entertainment, Kindergarten
-- **Users**: Nik, Zuzana
-- **Total Tracked**: €1412.57
-- **Backup Date**: 2026-04-18
+## Pre-Refactor Baseline (Current State)
+- **Backup Date**: 2026-04-26
+- **Expense Count**: 118
+- **Household Count**: 4 (Nikhil, Jur, Tom + 1)
+- **User Count**: 5
+- **Status**: Live Production (Data integrity is critical)
 
-## Migration Steps
-1. Created `invoices` table (additive, no modifications to `expenses`)
-2. Added `invoice_id` column to `expenses` (NULLABLE)
-3. No backfill of existing expenses (kept as-is for safety)
+## Recent Infrastructure Changes
+1. **Audit Logs Fix**: Changed `record_id` to `TEXT` to support manual expense slugs.
+2. **Onboarding Security**: Implemented `create_new_household` RPC to solve RLS chicken-and-egg issues.
+3. **Dynamic Categories**: Centralized category management via `ensureCategory()` in `state.js`.
+4. **Auth Self-Healing**: Automated mapping for legacy PIN users.
 
-## Post-Migration Validation
-- [ ] Expense count unchanged
-- [ ] All old expenses still queryable
-- [ ] app_state config intact
-- [ ] Budget calculations match pre-migration
-- [ ] New invoices can be created
-- [ ] Old expenses still appear in UI
+## Planned Refactor: "Operation Modular"
+- **Goal**: Split the 60KB `ui.js` God File into logical components.
+- **Risk**: Regression in UI rendering causing data to "disappear" from view.
+- **Safety Steps**:
+  1. No changes to SQL schema during this phase.
+  2. Maintain `validateRow()` checks on all writes.
+  3. Verify `expense_count` remains 118 (or higher) after each step.
+  4. Perform manual cross-browser testing for "All Members" view.
+
+## Post-Migration Validation Checklist
+- [ ] Expense count >= 118
+- [ ] New users (Jur/Tom) can still log in and see their data
+- [ ] Zuzana can still log in via PIN
+- [ ] Scanner still processes receipts and shows review modal
+- [ ] Manual entry still registers new categories dynamically
+- [ ] "All Members" filter stays active after editing (Fix verified)
 
 ## Rollback Plan
-If critical issues found:
-```sql
-ALTER TABLE expenses DROP COLUMN invoice_id;
-DROP TABLE invoices;
--- Revert code changes
--- All data untouched
-```
+If UI regression occurs:
+1. Revert `js/` files to previous Git commit.
+2. Clear browser cache.
+3. No database restoration needed (Logic-only refactor).
