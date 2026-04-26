@@ -982,50 +982,64 @@ function renderIntegrations() {
 ═══════════════════════════════════════════════ */
 async function executeAuth(mode) {
   var err = document.getElementById('auth-error');
-  var userInp = document.getElementById('auth-user')?.value?.trim();
-  var passInp = document.getElementById('auth-pass')?.value?.trim();
-  var pinInp = document.getElementById('auth-pin')?.value?.trim();
+  var codeInp = document.getElementById('auth-code')?.value?.trim();
   
-  if (mode === 'pin') {
-    if (!pinInp) {
-      err.style.color = 'var(--danger)';
-      err.textContent = 'Please enter your PIN';
+  if (mode === 'unified') {
+    if (!codeInp) { 
+      err.textContent = 'Please enter a PIN or Handle'; 
+      return; 
+    }
+    
+    // 1. LEGACY 4-DIGIT PIN (Bridge)
+    if (/^\d{4}$/.test(codeInp)) {
+      err.style.color = 'var(--nikhil)';
+      err.textContent = 'Unlocking family household...';
+      try {
+        const res = await fetch('/api/pin-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: codeInp })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'PIN validation failed');
+
+        await supabaseClient.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        });
+        window.location.reload();
+      } catch (e) {
+        err.style.color = 'var(--danger)';
+        err.textContent = e.message;
+      }
       return;
     }
-    err.style.color = 'var(--nikhil)';
-    err.textContent = 'Unlocking household...';
+
+    // 2. HANDLE ENTRY
+    // If they enter a handle (text), we check if it exists and then prompt Google
+    err.style.color = 'var(--accent)';
+    err.textContent = 'Checking handle...';
     try {
-      // Call our secure server-side PIN validator (credentials never touch the client)
-      const res = await fetch('/api/pin-auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: pinInp })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'PIN validation failed');
-
-      // Use the returned tokens to set the Supabase session directly
-      const { error: sessionErr } = await supabaseClient.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token
-      });
-      if (sessionErr) throw sessionErr;
-
-      window.location.reload();
-    } catch (e) {
-      err.style.color = 'var(--danger)';
-      err.textContent = e.message || 'Unlock failed';
+       const { data, error } = await supabaseClient.rpc('verify_household_access', { input_code: codeInp });
+       if (error || !data || data.length === 0) throw new Error("Invalid code or handle.");
+       
+       err.textContent = "Household found! Please sign in with Google to continue.";
+       // Store handle for auto-join after redirect
+       localStorage.setItem('pending_join_handle', codeInp);
+       setTimeout(() => executeAuth('google'), 1500);
+    } catch(e) {
+       err.style.color = 'var(--danger)';
+       err.textContent = e.message;
     }
     return;
   }
 
   if (mode === 'google') {
-    err.textContent = 'Redirecting to Google...';
+    err.textContent = 'Connecting to Google...';
     try {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // Explicitly clean the origin to prevent 'improperly formatted' errors
           redirectTo: window.location.origin.replace(/\/$/, "").trim()
         }
       });
@@ -1033,12 +1047,7 @@ async function executeAuth(mode) {
     } catch(e) { err.textContent = e.message; }
     return;
   }
-
-  // Simple Auth Mode
-  if (!userInp || !passInp) {
-    err.textContent = 'Enter both name and password';
-    return;
-  }
+}
   
   // Bridge Username to Email
   var email = userInp.includes('@') ? userInp : (userInp.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '@et-tracker.com');
@@ -1141,32 +1150,35 @@ async function finishOB() {
 }
 
 async function joinHousehold() {
-  const id = document.getElementById('ob-join-id').value.trim();
+  const handle = document.getElementById('ob-join-handle').value.trim();
+  const pin = document.getElementById('ob-join-pin').value.trim();
   const err = document.getElementById('ob-join-err');
-  if (!id) { err.textContent = 'Please paste a valid ID'; return; }
+  
+  if (!handle || !pin) { err.textContent = 'Enter both Handle and PIN'; return; }
   
   setSyncing('s');
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) throw new Error("No active session");
     
-    // 1. Verify household exists
+    // 1. Verify handle and PIN
     const { data: house, error: hErr } = await supabaseClient
       .from('households')
-      .select('id')
-      .eq('id', id)
+      .select('id, access_pin')
+      .eq('handle', handle)
       .maybeSingle();
       
-    if (hErr || !house) throw new Error("Household ID not found or invalid.");
+    if (hErr || !house) throw new Error("Household handle not found.");
+    if (house.access_pin !== pin) throw new Error("Incorrect Household PIN.");
     
     // 2. Link user to this household
     const { error: linkErr } = await supabaseClient
       .from('app_users')
-      .insert({ id: session.user.id, household_id: id });
+      .insert({ id: session.user.id, household_id: house.id });
       
     if (linkErr) throw linkErr;
     
-    HOUSEHOLD_ID = id;
+    HOUSEHOLD_ID = house.id;
     document.getElementById('onboarding-modal').classList.remove('open');
     location.reload();
   } catch(e) {
@@ -1176,10 +1188,16 @@ async function joinHousehold() {
 }
 
 function copyHID() {
-  const inp = document.getElementById('set-h-id');
-  inp.select();
-  document.execCommand('copy');
-  flash('Household ID copied to clipboard!');
+  const handle = document.getElementById('set-h-handle')?.value || '';
+  const pin = document.getElementById('set-h-pin')?.value || '';
+  const shareText = `Join my household on ET Expense!\nHandle: ${handle}\nPIN: ${pin}`;
+  
+  if (navigator.share) {
+    navigator.share({ title: 'Join ET Expense', text: shareText });
+  } else {
+    navigator.clipboard.writeText(shareText);
+    flash('Join details copied to clipboard!');
+  }
 }
 
 async function provisionHousehold(name) {
@@ -1189,7 +1207,20 @@ async function provisionHousehold(name) {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) throw new Error("No active session");
     
-    // 1. Create Household Row 
+    // 1. Generate Friendly Handle & PIN
+    const base = name.split(' ')[0].replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const handle = base + '-' + Math.floor(Math.random() * 90 + 10);
+    const pin = Math.floor(Math.random() * 9000 + 1000).toString();
+
+    // 2. Create Household Row 
+    const { data: house, error: hErr } = await supabaseClient
+      .from('households')
+      .insert({ name: name, handle: handle, access_pin: pin })
+      .select('id')
+      .single();
+      
+    if (hErr) throw hErr;
+    HOUSEHOLD_ID = house.id;
     // We include created_by so our RLS SELECT policy works immediately
     const { data: hh, error: hErr } = await supabaseClient
       .from('households')
@@ -1293,9 +1324,12 @@ function toggleTheme() {
 async function openSettings() {
   document.getElementById('nav-modal')?.classList.add('open');
   document.getElementById('settings-modal').classList.add('open');
-  if (document.getElementById('set-h-id')) {
-    document.getElementById('set-h-id').value = HOUSEHOLD_ID || '';
+  
+  if (document.getElementById('set-h-handle')) {
+    document.getElementById('set-h-handle').value = HOUSEHOLD_HANDLE || '';
+    document.getElementById('set-h-pin').value = HOUSEHOLD_PIN || '';
   }
+  
   applyNamesUI();
   renderSettingsRules();
   renderBudgetsGrid();

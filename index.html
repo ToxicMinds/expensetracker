@@ -41,43 +41,28 @@
 <!-- ══ AUTH MODAL ══ -->
 <div class="mbk" id="auth-modal">
   <div class="modal" style="max-width:320px; text-align:center;">
-    <div class="mtitle" style="margin-bottom:6px" id="lbl-auth-title">ET Expense Tracker</div>
-    <div class="msub" style="margin-bottom:1.5rem" id="lbl-auth-sub">Secure access to your household</div>
+    <div class="mtitle" style="margin-bottom:6px">ET Expense Tracker</div>
+    <div class="msub" style="margin-bottom:1.5rem">Secure access to your household</div>
     
-    <!-- Legacy PIN Bridge: NOW PRIMARY -->
-    <form onsubmit="event.preventDefault(); executeAuth('pin')" style="background:var(--nikhil-light); border:1px solid var(--nikhil); border-radius:var(--r); padding:1.5rem 1rem; margin-bottom:20px;">
-      <input type="text" name="username" value="household" autocomplete="username" style="display:none">
-      <div style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--nikhil); letter-spacing:0.1em; margin-bottom:12px;" id="lbl-family-passcode">🔐 Family Passcode</div>
-      <input type="password" id="auth-pin" placeholder="••••" autofocus autocomplete="current-password" inputmode="numeric" style="width:100%; text-align:center; letter-spacing:8px; font-size:24px; font-family:var(--mono); margin-bottom:12px; border-color:var(--nikhil);" maxlength="4">
-      <button type="submit" class="btn btn-p" style="width:100%; margin-top:0; background:var(--nikhil)" id="lbl-btn-pin-enter">Unlock Household</button>
+    <!-- Unified Access: PIN or Handle -->
+    <form onsubmit="event.preventDefault(); executeAuth('unified')" style="background:var(--nikhil-light); border:1px solid var(--nikhil); border-radius:var(--r); padding:1.5rem 1rem; margin-bottom:20px;">
+      <div style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--nikhil); letter-spacing:0.1em; margin-bottom:12px;">🔑 Access Code</div>
+      <input type="text" id="auth-code" placeholder="PIN or Handle" autofocus style="width:100%; text-align:center; font-size:20px; font-family:var(--mono); margin-bottom:12px; border-color:var(--nikhil);">
+      <button type="submit" class="btn btn-p" style="width:100%; margin-top:0; background:var(--nikhil)">Enter Household</button>
     </form>
 
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px">
       <hr style="flex:1; border:none; border-top:1px solid var(--border)">
-      <span style="font-size:11px; color:var(--muted)" id="lbl-auth-or-text">OR SIGN IN WITH</span>
+      <span style="font-size:11px; color:var(--muted)">OR SIGN IN WITH</span>
       <hr style="flex:1; border:none; border-top:1px solid var(--border)">
     </div>
 
     <button class="btn btn-g" onclick="executeAuth('google')" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; border:1px solid var(--border)">
       <img src="https://www.google.com/favicon.ico" width="16" height="16">
-      <span id="lbl-continue-google">Google Account</span>
+      <span>Google Account</span>
     </button>
 
-    <div style="margin-top:1.5rem">
-      <div style="font-size:11px; color:var(--muted); cursor:pointer; text-decoration:underline;" onclick="document.getElementById('simple-auth-section').style.display='block'; this.style.display='none'" id="lbl-show-advanced">Advanced: Username & Password</div>
-      
-      <form id="simple-auth-section" onsubmit="event.preventDefault(); executeAuth('simple')" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border)">
-        <input type="text" id="auth-user" name="username" autocomplete="username" placeholder="Username" style="width:100%; text-align:center; font-size:14px; margin-bottom:0.5rem;">
-        <input type="password" id="auth-pass" name="password" autocomplete="current-password" placeholder="Password" style="width:100%; text-align:center; font-size:14px; margin-bottom:0.8rem;">
-        <button type="submit" class="btn btn-g" style="width:100%; margin-top:0; font-size:13px" id="lbl-btn-enter">Login</button>
-      </form>
-    </div>
-    
     <div id="auth-error" style="color:var(--danger); font-size:12px; min-height:16px; margin-top:10px;"></div>
-    
-    <div style="margin-top:1.5em; font-size:11px; color:var(--muted); line-height:1.4" id="lbl-auth-footer">
-      Just use any name and pass to start.<br>First time? We'll create it automatically.
-    </div>
   </div>
 </div>
 
@@ -128,8 +113,9 @@
     <div id="ob-step-4" class="ob-step" style="display:none">
       <div style="font-size:40px; margin-bottom:10px;">🔗</div>
       <div class="mtitle">Join a Household</div>
-      <div class="msub">Enter the Household ID shared with you.</div>
-      <input type="text" id="ob-join-id" placeholder="Paste Household ID (UUID)" style="width:100%; text-align:center; margin: 1.5rem 0; font-family:var(--mono); font-size:12px">
+      <div class="msub">Enter the Household Handle and PIN shared with you.</div>
+      <input type="text" id="ob-join-handle" placeholder="Handle (e.g. shanbhag-26)" style="width:100%; text-align:center; margin: 1.5rem 0 0.5rem 0; font-family:var(--mono); font-size:14px">
+      <input type="password" id="ob-join-pin" placeholder="Household PIN" style="width:100%; text-align:center; margin: 0.5rem 0 1.5rem 0; font-family:var(--mono); font-size:20px; letter-spacing:4px">
       <div id="ob-join-err" style="color:var(--danger); font-size:12px; margin-top:-10px; margin-bottom:15px"></div>
       <button class="btn btn-p" style="width:100%" onclick="joinHousehold()">Join Now</button>
       <button class="btn btn-g" style="width:100%; margin-top:10px" onclick="nextOB(1)">Back</button>
@@ -293,10 +279,11 @@
   </div>
 
   <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border)">
-    <div class="fl">Household ID (Share this for others to join)</div>
-    <div style="display:flex; gap:8px">
-      <input type="text" id="set-h-id" readonly style="background:var(--bg); font-family:var(--mono); font-size:11px; flex:1">
-      <button class="btn btn-g" onclick="copyHID()" style="white-space:nowrap; width:auto; padding:0 12px">Copy</button>
+    <div class="fl">Household Handle & PIN (Share to invite)</div>
+    <div style="display:flex; gap:8px; margin-bottom:8px">
+      <input type="text" id="set-h-handle" readonly style="background:var(--bg); font-family:var(--mono); font-size:12px; flex:2">
+      <input type="text" id="set-h-pin" readonly style="background:var(--bg); font-family:var(--mono); font-size:12px; flex:1; text-align:center">
+      <button class="btn btn-g" onclick="copyHID()" style="white-space:nowrap; width:auto; padding:0 12px">Share</button>
     </div>
   </div>
 

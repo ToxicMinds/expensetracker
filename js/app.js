@@ -34,6 +34,12 @@ async function init() {
 
   if (householdRes.data?.household_id) {
     HOUSEHOLD_ID = householdRes.data.household_id;
+    // Fetch handle and pin for settings/sharing
+    const { data: house } = await supabaseClient.from('households').select('handle, access_pin').eq('id', HOUSEHOLD_ID).maybeSingle();
+    if (house) {
+      HOUSEHOLD_HANDLE = house.handle;
+      HOUSEHOLD_PIN = house.access_pin;
+    }
   }
 
   applyTranslations();
