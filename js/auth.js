@@ -169,24 +169,17 @@ async function provisionHousehold(name) {
     const handle = base + '-' + Math.floor(Math.random() * 90 + 10);
     const pin = Math.floor(Math.random() * 9000 + 1000).toString();
 
-    // 2. Create Household Row 
-    const { data: house, error: houseErr } = await supabaseClient
-      .from('households')
-      .insert({ name: name, handle: handle, access_pin: pin })
-      .select('id')
-      .single();
+    // 2. Create Household & Link User via RPC (RLS-safe atomic transaction)
+    const { data: houseId, error: rpcErr } = await supabaseClient.rpc('create_new_household', {
+      h_name: name,
+      h_handle: handle,
+      h_pin: pin
+    });
       
-    if (houseErr) throw houseErr;
-    if (!house) throw new Error("Household creation failed (no data)");
+    if (rpcErr) throw rpcErr;
+    if (!houseId) throw new Error("Household creation failed (no ID returned)");
 
-    // 3. Link User to Household 
-    const { error: mappingErr } = await supabaseClient
-      .from('app_users')
-      .insert({ id: session.user.id, household_id: house.id });
-    
-    if (mappingErr) throw mappingErr;
-
-    HOUSEHOLD_ID = house.id;
+    HOUSEHOLD_ID = houseId;
     HOUSEHOLD_HANDLE = handle;
     HOUSEHOLD_PIN = pin;
     return true;
