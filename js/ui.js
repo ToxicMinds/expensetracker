@@ -1009,7 +1009,8 @@ function renderIntegrations() {
    ONBOARDING LOGIC
 ═══════════════════════════════════════════════ */
 function nextOB(step) {
-  if (step === 2) {
+  // If moving FROM Step 2 TO Step 3, validate name
+  if (step === 3) {
     const hname = document.getElementById('ob-hname').value.trim();
     if (!hname) { alert('Please name your household first'); return; }
   }

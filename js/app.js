@@ -34,6 +34,18 @@ async function init() {
 
   if (householdRes.data?.household_id) {
     HOUSEHOLD_ID = householdRes.data.household_id;
+  } else if (session.user.email === 'legacy@et-tracker.com') {
+    // SELF-HEALING: Legacy PIN user was logged in but mapping is missing.
+    // Automatically link to the first household in the system.
+    const { data: firstHouse } = await supabaseClient.from('households').select('id').order('created_at', { ascending: true }).limit(1).maybeSingle();
+    if (firstHouse) {
+      HOUSEHOLD_ID = firstHouse.id;
+      // Force the mapping in app_users for future stability
+      await supabaseClient.from('app_users').insert({ id: session.user.id, household_id: HOUSEHOLD_ID }).select().single();
+    }
+  }
+
+  if (HOUSEHOLD_ID) {
     // Fetch handle and pin for settings/sharing
     const { data: house } = await supabaseClient.from('households').select('handle, access_pin').eq('id', HOUSEHOLD_ID).maybeSingle();
     if (house) {

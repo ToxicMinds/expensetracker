@@ -8,7 +8,7 @@
 CREATE TABLE IF NOT EXISTS public.audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     table_name TEXT NOT NULL,
-    record_id UUID NOT NULL,
+    record_id TEXT NOT NULL, -- Changed from UUID to TEXT to support legacy/slug IDs
     action TEXT NOT NULL, -- INSERT, UPDATE, DELETE
     old_data JSONB,
     new_data JSONB,
