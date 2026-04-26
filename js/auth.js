@@ -141,9 +141,8 @@ async function joinHousehold() {
 }
 
 function copyHID() {
-  const handle = document.getElementById('set-h-handle')?.value || '';
-  const pin = document.getElementById('set-h-pin')?.value || '';
-  const shareText = `Join my household on ET Expense!\nHandle: ${handle}\nPIN: ${pin}`;
+  const handle = document.getElementById('set-h-handle')?.value || HOUSEHOLD_HANDLE || '';
+  const shareText = `Join my household on ET Expense!\nHandle: ${handle}\nPIN: [Ask me for the PIN!]`;
   
   if (navigator.share) {
     navigator.share({ title: 'Join ET Expense', text: shareText });
@@ -152,6 +151,15 @@ function copyHID() {
     if (typeof flash === 'function') flash('Join details copied to clipboard!');
     else alert('Join details copied to clipboard!');
   }
+}
+
+async function sbUpdateHouseholdPin(newPin) {
+  if (!HOUSEHOLD_ID) return;
+  const res = await supabaseClient
+    .from('households')
+    .update({ access_pin: newPin })
+    .eq('id', HOUSEHOLD_ID);
+  if (res.error) throw res.error;
 }
 
 /**
@@ -225,6 +233,8 @@ async function finishOB() {
     
     // Save state (names, etc)
     if (typeof sbSaveState === 'function') await sbSaveState();
+    
+    alert("Household created!\\nHandle: " + HOUSEHOLD_HANDLE + "\\nPIN: " + HOUSEHOLD_PIN + "\\n\\nPlease save your PIN safely. For security, it cannot be shown again!");
     
     document.getElementById('onboarding-modal').classList.remove('open');
     location.reload();

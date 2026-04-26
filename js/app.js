@@ -47,10 +47,10 @@ async function init() {
 
   if (HOUSEHOLD_ID) {
     // Fetch handle and pin for settings/sharing
-    const { data: house } = await supabaseClient.from('households').select('handle, access_pin').eq('id', HOUSEHOLD_ID).maybeSingle();
+    const { data: house } = await supabaseClient.from('households').select('handle').eq('id', HOUSEHOLD_ID).maybeSingle();
     if (house) {
       HOUSEHOLD_HANDLE = house.handle;
-      HOUSEHOLD_PIN = house.access_pin;
+      // HOUSEHOLD_PIN = house.access_pin; (Removed: hashes should not be stored in client memory)
     }
   }
 

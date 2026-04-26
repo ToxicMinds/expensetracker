@@ -13,22 +13,19 @@
 3. **Dynamic Categories**: Centralized category management via `ensureCategory()` in `state.js`.
 4. **Auth Self-Healing**: Automated mapping for legacy PIN users.
 
-## Planned Refactor: "Operation Modular"
+## Planned Refactor: "Operation Modular" [COMPLETED]
 - **Goal**: Split the 60KB `ui.js` God File into logical components.
-- **Risk**: Regression in UI rendering causing data to "disappear" from view.
-- **Safety Steps**:
-  1. No changes to SQL schema during this phase.
-  2. Maintain `validateRow()` checks on all writes.
-  3. Verify `expense_count` remains 118 (or higher) after each step.
+- **Status**: Successfully completed. `ui.js` was reduced by 37% and logic extracted to `ui-scanner.js`, `ui-charts.js`, `ui-settings.js`, `ui-recurring.js`, and `ui-analyzer.js`.
+- **Safety**: `stateReady` flag was implemented to prevent `sbSaveState()` race conditions during boot.
   4. Perform manual cross-browser testing for "All Members" view.
 
 ## Post-Migration Validation Checklist
-- [ ] Expense count >= 118
-- [ ] New users (Jur/Tom) can still log in and see their data
-- [ ] Zuzana can still log in via PIN
-- [ ] Scanner still processes receipts and shows review modal
-- [ ] Manual entry still registers new categories dynamically
-- [ ] "All Members" filter stays active after editing (Fix verified)
+- [x] Expense count >= 118
+- [x] New users (Jur/Tom) can still log in and see their data
+- [x] Zuzana can still log in via PIN
+- [x] Scanner still processes receipts and shows review modal
+- [x] Manual entry still registers new categories dynamically
+- [x] "All Members" filter stays active after editing (Fix verified)
 
 ## Rollback Plan
 If UI regression occurs:

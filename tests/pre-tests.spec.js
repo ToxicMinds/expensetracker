@@ -3,7 +3,7 @@ const fs = require('fs');
 const SB_URL = 'https://yleswxfenmuzmxeekxkg.supabase.co';
 const SB_KEY = 'sb_publishable_qJGOiVaWDrd9Fq6EUJvGUg_a8VrWCUx';
 const REST = SB_URL + '/rest/v1/expenses';
-const REST_STATE = SB_URL + '/rest/v1/app_state?id=eq.global&select=config';
+const REST_STATE = SB_URL + '/rest/v1/app_state?select=config&limit=1';
 
 function sbH() {
   return {

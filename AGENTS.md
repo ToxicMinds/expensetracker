@@ -38,17 +38,15 @@ Runs Jest tests for the financial calculation layer (`tests/finance.test.js`). T
 - **Key Functions**: `init()` (main bootstrap), `setupRealtime()` (Postgres change subscriptions)
 - **Security**: Inactivity lockout (10 min) with session expiration and auth state change listeners
 
-#### `js/ui.js` (Large "God File" — TECH_DEBT-003)
-- **Size**: ~54KB; handles all DOM rendering, event handlers, and form logic
-- **Main Functions**:
-  - `renderAll()` — master render orchestration
-  - `renderCards()` — expense list display
-  - `applyNamesUI()` — dynamic user toggle buttons
-  - `openForm()`, `submitForm()` — expense CRUD
-  - Monthly ritual/insights system
-  - Quick-entry suggestions based on vendor frequency
-- **Tech Debt**: String concatenation for HTML generation (XSS risk); should refactor into component modules
-- **Workaround**: Use `esc()` utility for escaping user input; avoid direct innerHTML with user data
+#### UI Architecture (Operation Modular completed)
+The UI has been modularized away from a single "God File" to prevent race conditions and manage complexity.
+- **`js/ui.js`**: Master orchestrator for rendering lists (`renderCards()`), forms (`openForm()`), and dynamic user buttons.
+- **`js/ui-scanner.js`**: Manages the QR camera, eKasa parser, and receipt review modal.
+- **`js/ui-charts.js`**: Contains all `Chart.js` instances (monthly doughnut/bar, advanced trends/radar).
+- **`js/ui-settings.js`**: Settings panel, bank sync UI, budgets, and Google Calendar integration.
+- **`js/ui-recurring.js`**: UI layer for recurring bills.
+- **`js/ui-analyzer.js`**: AI Statement Analyzer interface.
+- **Safety Rule**: Use template literals `` `...` `` and the `esc()` utility for HTML building. Avoid direct string concatenation. All new UI modules must be loaded in `index.html` *before* `ui.js` and `app.js`.
 
 #### `js/finance.js` (Pure Calculations)
 - **Purpose**: Stateless financial computations (totals, forecasts, budgets, per-user spend)
@@ -98,10 +96,10 @@ See `sql/` directory for migration history and table definitions.
 - **Solution**: Added `validateRow()` in `state.js` to catch data inconsistencies before writes
 - **Lesson**: Always validate row shape and constraints before insert/update
 
-### TECH_DEBT-003: UI God File (IN PROGRESS)
-- **Problem**: `ui.js` is 54KB with mixed concerns (render, handlers, API calls, logic)
-- **Status**: Identify refactoring opportunities before making large changes
-- **Workaround**: When adding features, try to isolate logic in separate files (`logic-*.js`), then call from `ui.js`
+### TECH_DEBT-003: God File Pattern (COMPLETED)
+- **Problem**: `ui.js` was 60KB with mixed concerns (render, handlers, API calls, logic)
+- **Solution**: Split into focused modules (`ui-scanner.js`, `ui-charts.js`, `ui-settings.js`, etc.) during Operation Modular.
+- **Status**: Completed. Remaining UI code in `ui.js` is pure orchestration.
 
 ### TECH_DEBT-004: Category DRY Violation
 - **Problem**: Categories hardcoded in multiple places (index.html, state.js, ui.js)
@@ -151,13 +149,18 @@ See `DATA_PRESERVATION.md` for migration safety. Key principle: **additive migra
 ├── js/
 │   ├── app.js            (Bootstrap & auth orchestration)
 │   ├── state.js          (Globals, boot, i18n)
-│   ├── ui.js             (Render & event handlers — LARGE FILE)
 │   ├── api.js            (eKasa, Groq, external APIs)
 │   ├── auth.js           (PIN & OAuth login)
 │   ├── finance.js        (Pure calculations)
 │   ├── logic-recurring.js (Recurring bills logic)
 │   ├── rules.js          (Smart rules engine)
 │   ├── utils.js          (Utility functions: esc, fmt, etc.)
+│   ├── ui.js             (Render orchestrator)
+│   ├── ui-scanner.js     (Camera & receipt review)
+│   ├── ui-charts.js      (Chart.js instances)
+│   ├── ui-settings.js    (Settings panel & banks)
+│   ├── ui-recurring.js   (Recurring bills UI)
+│   └── ui-analyzer.js    (AI analyzer interface)
 ├── tests/
 │   └── finance.test.js    (Jest unit tests)
 ├── sql/

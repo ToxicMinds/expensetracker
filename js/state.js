@@ -239,7 +239,7 @@ async function sbSelect() {
   cutOff.setMonth(cutOff.getMonth() - 4);
   const dateStr = cutOff.toISOString().slice(0, 10);
   
-  var r = await fetch(REST+'?household_id=eq.'+HOUSEHOLD_ID+'&date=gte.'+dateStr+'&select=*&order=date.desc,created_at.desc', {headers:sbH()});
+  var r = await fetch(REST+'?household_id=eq.'+HOUSEHOLD_ID+'&date=gte.'+dateStr+'&is_deleted=eq.false&select=*&order=date.desc,created_at.desc', {headers:sbH()});
   var b = await r.text();
   dbg('SELECT '+r.status, b.slice(0, 100), true);
   if (!r.ok) throw new Error('Load failed '+r.status+': '+b.slice(0,300));
@@ -268,10 +268,14 @@ async function sbCreateInvoice(invoice) {
   return data[0];
 }
 async function sbDelete(id) {
-  dbg('DELETE id='+id, {}, true);
-  var r = await fetch(REST+'?id=eq.'+encodeURIComponent(id)+'&household_id=eq.'+HOUSEHOLD_ID, {method:'DELETE', headers:sbH({'Prefer':'return=minimal'})});
+  dbg('SOFT DELETE id='+id, {}, true);
+  var r = await fetch(REST+'?id=eq.'+encodeURIComponent(id)+'&household_id=eq.'+HOUSEHOLD_ID, {
+    method:'PATCH', 
+    headers:sbH({'Prefer':'return=minimal'}),
+    body: JSON.stringify({ is_deleted: true })
+  });
   var b = await r.text();
-  dbg('DELETE '+r.status, b ? b.slice(0,80) : 'OK', true);
+  dbg('SOFT DELETE '+r.status, b ? b.slice(0,80) : 'OK', true);
   if (!r.ok) throw new Error('Delete failed '+r.status+': '+b.slice(0,300));
 }
 async function sbUpdate(id, row) {

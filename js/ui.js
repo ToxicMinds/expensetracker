@@ -843,7 +843,7 @@ async function openSettings() {
   
   if (document.getElementById('set-h-handle')) {
     document.getElementById('set-h-handle').value = HOUSEHOLD_HANDLE || '';
-    document.getElementById('set-h-pin').value = HOUSEHOLD_PIN || '';
+
   }
   
   applyNamesUI();

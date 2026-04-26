@@ -147,6 +147,28 @@ function renderIntegrations() {
   }
 }
 
+/* Prompt the user for a new secure PIN */
+async function promptChangePin() {
+  const newPin = prompt("Enter a new 4-digit PIN for your household (numbers only):");
+  if (!newPin) return;
+  if (!/^\\d{4}$/.test(newPin)) {
+    alert("PIN must be exactly 4 digits.");
+    return;
+  }
+  
+  if (confirm("Are you sure you want to change the PIN? Other members will need the new PIN to log in on new devices.")) {
+    try {
+      if (typeof setSyncing === 'function') setSyncing('s');
+      await sbUpdateHouseholdPin(newPin);
+      alert("PIN changed successfully!");
+      if (typeof setSyncing === 'function') setSyncing('ok');
+    } catch(e) {
+      alert("Failed to change PIN: " + e.message);
+      if (typeof setSyncing === 'function') setSyncing('e');
+    }
+  }
+}
+
 /* Open the settings/nav modal and populate all sections */
 async function openSettings() {
   document.getElementById('nav-modal')?.classList.add('open');
@@ -154,7 +176,6 @@ async function openSettings() {
 
   if (document.getElementById('set-h-handle')) {
     document.getElementById('set-h-handle').value = HOUSEHOLD_HANDLE || '';
-    document.getElementById('set-h-pin').value    = HOUSEHOLD_PIN   || '';
   }
 
   applyNamesUI();
