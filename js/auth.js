@@ -131,7 +131,7 @@ async function joinHousehold() {
       
     if (linkErr) throw linkErr;
     
-    HOUSEHOLD_ID = house.id;
+    HOUSEHOLD_ID = householdId;
     document.getElementById('onboarding-modal').classList.remove('open');
     location.reload();
   } catch(e) {
