@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { useHousehold } from '@/hooks/useHousehold';
 
 export function NavBar() {
@@ -41,7 +40,19 @@ export function NavBar() {
     }}>
       <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Image src="/icon.png" alt="ET Logo" width={32} height={32} style={{ borderRadius: 6 }} />
+          {/* Logo with Fallback */}
+          <div style={{ position: 'relative', width: 32, height: 32, background: 'var(--bg-secondary)', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyItems: 'center' }}>
+            <img 
+              src="/icon.png" 
+              alt="ET" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => {
+                // If the image fails, show a stylized 'ET' initials box
+                (e.target as any).style.display = 'none';
+                (e.target as any).parentElement.innerHTML = '<div style="background:var(--accent-primary);color:var(--accent-primary-text);width:100%;height:100%;display:flex;alignItems:center;justifyContent:center;fontWeight:bold;fontSize:14px">ET</div>';
+              }}
+            />
+          </div>
           <span style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-primary)' }}>ET Expense</span>
         </Link>
         <div style={{ display: 'flex', gap: 24 }}>

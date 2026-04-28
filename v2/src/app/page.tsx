@@ -55,10 +55,30 @@ function DashboardContent() {
           </div>
         ) : (
           <>
-            {/* The Intelligence Row */}
+            {/* TOP ROW: Brains & Hands */}
             <AIInsights householdId={household.household_id} />
 
-            <div className="order-first-mobile" style={{ gridColumn: 'span 4' }}>
+            <BentoCard colSpan={4} title="Quick Actions" className="order-first-mobile">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button 
+                  className="btn btn-primary" 
+                  style={{ height: 48, fontSize: 16, gap: 8 }}
+                  onClick={() => setShowScanner(true)}
+                >
+                  📸 Scan Receipt
+                </button>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ height: 44 }}
+                  onClick={() => alert("Manual entry coming soon!")}
+                >
+                  ➕ Add Manual
+                </button>
+              </div>
+            </BentoCard>
+
+            {/* SECOND ROW: Financial Overview */}
+            <div style={{ gridColumn: 'span 4' }}>
               <BentoCard title="Overview">
                 <div style={{ fontSize: 36, fontWeight: 500, letterSpacing: '-0.02em' }}>
                   €{calcTotals(expenses).spent.toFixed(2)}
@@ -71,7 +91,7 @@ function DashboardContent() {
             </div>
 
             <BentoCard colSpan={8} rowSpan={2} title="Recent Expenses">
-              <div className="scroll-area">
+              <div className="scroll-area" style={{ maxHeight: 600 }}>
                 <ExpenseList expenses={expenses} onDelete={softDeleteExpense} />
               </div>
             </BentoCard>
@@ -80,18 +100,7 @@ function DashboardContent() {
               <SpendingBreakdown expenses={expenses} />
             </BentoCard>
 
-            <BentoCard colSpan={4} title="Quick Actions">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button className="btn btn-primary" onClick={() => alert("Quick manual entry coming soon!")}>Add Expense</button>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => setShowScanner(true)}
-                >
-                  Scan Receipt
-                </button>
-              </div>
-            </BentoCard>
-
+            {/* FOOTER ROW: Analytics */}
             <BentoCard colSpan={12} title="Top Items (Deep Analytics)">
               <ItemAnalytics householdId={household.household_id} />
             </BentoCard>
