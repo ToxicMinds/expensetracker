@@ -75,17 +75,21 @@ export default function Home() {
               />
             </BentoCard>
 
-            <BentoCard colSpan={8} rowSpan={2} title="Recent Expenses">
-              <ExpenseList expenses={expenses} onDelete={softDeleteExpense} />
-            </BentoCard>
+            <div className="order-first-mobile" style={{ gridColumn: 'span 4' }}>
+              <BentoCard title="Overview">
+                <div style={{ fontSize: 36, fontWeight: 500, letterSpacing: '-0.02em' }}>
+                  €{calcTotals(expenses).spent.toFixed(2)}
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Total Spent</p>
+                <div style={{ marginTop: 24 }}>
+                  <DailyTrend expenses={expenses} />
+                </div>
+              </BentoCard>
+            </div>
 
-            <BentoCard colSpan={4} title="Overview">
-              <div style={{ fontSize: 36, fontWeight: 500, letterSpacing: '-0.02em' }}>
-                €{calcTotals(expenses).spent.toFixed(2)}
-              </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Total Spent</p>
-              <div style={{ marginTop: 24 }}>
-                <DailyTrend expenses={expenses} />
+            <BentoCard colSpan={8} rowSpan={2} title="Recent Expenses">
+              <div className="scroll-area">
+                <ExpenseList expenses={expenses} onDelete={softDeleteExpense} />
               </div>
             </BentoCard>
 

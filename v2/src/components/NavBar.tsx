@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 
 export function NavBar() {
   const pathname = usePathname();
@@ -26,7 +27,10 @@ export function NavBar() {
       zIndex: 100
     }}>
       <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-        <span style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-primary)' }}>ET v2</span>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <Image src="/icon.png" alt="ET Logo" width={32} height={32} style={{ borderRadius: 6 }} />
+          <span style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-primary)' }}>ET Expense</span>
+        </Link>
         <div style={{ display: 'flex', gap: 24 }}>
           {navItems.map((item) => (
             <Link 
