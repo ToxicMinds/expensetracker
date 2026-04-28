@@ -132,5 +132,5 @@ export function useExpenses(householdId: string | undefined) {
     if (error) throw error;
   };
 
-  return { expenses, loading, addExpense, softDeleteExpense, fetchExpenses };
+  return { expenses, loading, addExpense, saveReceipt, softDeleteExpense, fetchExpenses };
 }
