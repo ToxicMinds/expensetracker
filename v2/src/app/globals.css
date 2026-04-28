@@ -82,6 +82,13 @@ a {
   padding: 24px;
 }
 
+@media (max-width: 768px) {
+  .bento-grid {
+    grid-template-columns: 1fr; /* Stack everything on mobile */
+    padding: 16px;
+  }
+}
+
 .bento-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);

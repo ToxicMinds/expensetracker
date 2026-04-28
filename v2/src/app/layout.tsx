@@ -16,6 +16,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ET Expense v2",
   description: "Modern minimalist household expense tracker",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "ET Expense",
+  },
 };
 
 export default function RootLayout({
@@ -25,6 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+      </head>
       <body>
         <NavBar />
         <div className="container" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
