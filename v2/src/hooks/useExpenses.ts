@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Expense } from '@/lib/finance';
+import { normalizeAndLinkMerchant } from '@/lib/neo4j';
 
 export interface ReceiptItem {
   name: string;
@@ -114,6 +115,11 @@ export function useExpenses(householdId: string | undefined) {
 
       if (itemsError) throw itemsError;
     }
+
+    // 3. Neo4j Normalization (Fire and forget to keep UI snappy)
+    normalizeAndLinkMerchant(receipt.store, expenseData.id, expenseData.amount).catch(err => 
+      console.error('Neo4j Sync Failed:', err)
+    );
   };
 
   const softDeleteExpense = async (id: string) => {
