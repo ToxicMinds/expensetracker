@@ -18,6 +18,14 @@ export default function Home() {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
 
+  // Auto-select first user if none selected
+  useEffect(() => {
+    if (household && !selectedUser) {
+      const firstId = Object.keys(household.names)[0];
+      if (firstId) setSelectedUser(firstId);
+    }
+  }, [household, selectedUser]);
+
   const loading = hLoading || (household && eLoading);
 
   const handleSaveReceipt = async (data: ReceiptData) => {
