@@ -10,6 +10,7 @@ import { calcTotals, calcBudgetStatus } from '@/lib/finance';
 import { AuthScreen } from '@/components/AuthScreen';
 import { ReceiptScanner } from '@/components/ReceiptScanner';
 import { ItemAnalytics } from '@/components/ItemAnalytics';
+import { SpendingBreakdown, DailyTrend } from '@/components/FinanceCharts';
 
 export default function Home() {
   const { session, household, loading: hLoading } = useHousehold();
@@ -75,6 +76,13 @@ export default function Home() {
                 €{calcTotals(expenses).spent.toFixed(2)}
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Total Spent</p>
+              <div style={{ marginTop: 24 }}>
+                <DailyTrend expenses={expenses} />
+              </div>
+            </BentoCard>
+
+            <BentoCard colSpan={4} title="Categories">
+              <SpendingBreakdown expenses={expenses} />
             </BentoCard>
 
             <BentoCard colSpan={4} title="Quick Actions">

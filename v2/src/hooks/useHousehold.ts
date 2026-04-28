@@ -74,5 +74,24 @@ export function useHousehold() {
     }
   };
 
-  return { session, household, loading, fetchHouseholdState };
+  const updateState = async (updates: Partial<AppState>) => {
+    if (!household?.household_id) return;
+    
+    const config = {
+      names: updates.names || household.names,
+      income: updates.income || household.income,
+      budgets: updates.budgets || household.budgets,
+      memory: updates.memory || household.memory
+    };
+
+    const { error } = await supabase
+      .from('app_state')
+      .update({ config })
+      .eq('id', household.household_id);
+
+    if (error) throw error;
+    setHousehold({ ...household, ...updates });
+  };
+
+  return { session, household, loading, fetchHouseholdState, updateState };
 }
