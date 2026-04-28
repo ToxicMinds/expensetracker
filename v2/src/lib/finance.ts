@@ -6,6 +6,7 @@ export interface Expense {
   date: string;
   who?: string;
   who_id?: string;
+  description?: string;
   recurring_id?: string;
   is_deleted?: boolean;
 }

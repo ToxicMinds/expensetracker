@@ -55,11 +55,10 @@ export function ReceiptScanner({
       const receiptId = extractEkasaId(decodedText);
       if (!receiptId) throw new Error("Could not find a valid eKasa ID in this QR code.");
 
-      // 2. Fetch from eKasa Proxy
-      const response = await fetch('/api/ekasa-proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiptId })
+      // 2. Fetch from eKasa Proxy (Next.js Rewrite)
+      const response = await fetch(`/ekasa-proxy/${receiptId}`, {
+        method: 'GET', // Standard eKasa API is GET for fetching data
+        headers: { 'Content-Type': 'application/json' }
       });
       
       if (!response.ok) throw new Error("Failed to fetch receipt data.");
