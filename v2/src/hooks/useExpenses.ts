@@ -1,0 +1,130 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Expense } from '@/lib/finance';
+
+export interface ReceiptItem {
+  name: string;
+  amount: number;
+  category: string;
+  selected: boolean;
+}
+
+export interface ReceiptData {
+  store: string;
+  date: string;
+  total: number;
+  items: ReceiptItem[];
+}
+
+export function useExpenses(householdId: string | undefined) {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!householdId) {
+      setExpenses([]);
+      setLoading(false);
+      return;
+    }
+
+    fetchExpenses();
+
+    // Set up Realtime Subscription
+    const channel = supabase.channel('expenses-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'expenses',
+        filter: `household_id=eq.${householdId}`
+      }, () => {
+        fetchExpenses();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [householdId]);
+
+  const fetchExpenses = async () => {
+    if (!householdId) return;
+    
+    // Fetch last 4 months (matching old state.js logic)
+    const cutOff = new Date();
+    cutOff.setMonth(cutOff.getMonth() - 4);
+    const dateStr = cutOff.toISOString().slice(0, 10);
+
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('household_id', householdId)
+      .eq('is_deleted', false)
+      .gte('date', dateStr)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setExpenses(data);
+    }
+    setLoading(false);
+  };
+
+  const addExpense = async (expense: Partial<Expense>) => {
+    if (!householdId) return;
+    const { error } = await supabase
+      .from('expenses')
+      .insert({ ...expense, household_id: householdId });
+    if (error) throw error;
+  };
+
+  const saveReceipt = async (receipt: ReceiptData, whoId: string, whoName: string) => {
+    if (!householdId) return;
+
+    // 1. Insert the parent Expense
+    const { data: expenseData, error: expenseError } = await supabase
+      .from('expenses')
+      .insert({
+        household_id: householdId,
+        who_id: whoId,
+        who: whoName,
+        category: 'Multiple', // Or most common category
+        amount: receipt.items.filter(i => i.selected).reduce((acc, curr) => acc + curr.amount, 0),
+        date: receipt.date,
+        description: receipt.store,
+      })
+      .select()
+      .single();
+
+    if (expenseError) throw expenseError;
+
+    // 2. Insert the Receipt Items
+    const selectedItems = receipt.items.filter(i => i.selected);
+    if (selectedItems.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('receipt_items')
+        .insert(selectedItems.map(item => ({
+          expense_id: expenseData.id,
+          household_id: householdId,
+          name: item.name,
+          amount: item.amount,
+          category: item.category
+        })));
+
+      if (itemsError) throw itemsError;
+    }
+  };
+
+  const softDeleteExpense = async (id: string) => {
+    if (!householdId) return;
+    const { error } = await supabase
+      .from('expenses')
+      .update({ is_deleted: true })
+      .eq('id', id)
+      .eq('household_id', householdId);
+    if (error) throw error;
+  };
+
+  return { expenses, loading, addExpense, softDeleteExpense, fetchExpenses };
+}

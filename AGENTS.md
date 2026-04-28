@@ -179,7 +179,8 @@ See `DATA_PRESERVATION.md` for migration safety. Key principle: **additive migra
 3. **Category Assumptions**: Savings and Adjustment categories are excluded from "spent" totals but counted separately.
 4. **Real-time Subscriptions**: If editing while subscribed, changes will trigger a full render; use `busy` flag to prevent race conditions.
 5. **Supabase JWT**: Stored in `SESSION_JWT` global; used for authenticated API calls. Expires with session.
-6. **Household PIN**: Stored in plaintext in `households.access_pin`; currently no hashing (security debt).
+6. **Household PIN (Security)**: Stored as a secure bcrypt hash in `households.access_pin`. Do not attempt to read it via the API; it must be verified using the `check_household_pin` RPC.
+7. **Soft Deletes**: Deleting an expense sets `is_deleted = true`. All `sbSelect` calls must append `&is_deleted=eq.false` to hide them from the UI. RLS intentionally allows users to see their own deleted records if they query the API directly (in case of future 'restore' features).
 
 ## Before Making Changes
 
