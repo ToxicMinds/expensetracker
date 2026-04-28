@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useHousehold } from '@/hooks/useHousehold';
+import { Suspense } from 'react';
 
-export function NavBar() {
+function UserSwitcher() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,6 +19,33 @@ export function NavBar() {
     params.set('u', id);
     router.push(`${pathname}?${params.toString()}`);
   };
+
+  if (Object.keys(names).length === 0) return null;
+
+  return (
+    <select 
+      value={selectedUser || ''} 
+      onChange={(e) => handleUserChange(e.target.value)}
+      style={{
+        padding: '6px 12px',
+        borderRadius: 6,
+        border: '1px solid var(--border-color)',
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-primary)',
+        fontSize: 13,
+        fontWeight: 500,
+        cursor: 'pointer'
+      }}
+    >
+      {Object.entries(names).map(([id, name]) => (
+        <option key={id} value={id}>{name}</option>
+      ))}
+    </select>
+  );
+}
+
+export function NavBar() {
+  const pathname = usePathname();
 
   const navItems = [
     { name: 'Dashboard', href: '/' },
@@ -40,16 +68,16 @@ export function NavBar() {
     }}>
       <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          {/* Logo with Fallback */}
           <div style={{ position: 'relative', width: 32, height: 32, background: 'var(--bg-secondary)', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyItems: 'center' }}>
             <img 
               src="/icon.png" 
               alt="ET" 
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={(e) => {
-                // If the image fails, show a stylized 'ET' initials box
                 (e.target as any).style.display = 'none';
-                (e.target as any).parentElement.innerHTML = '<div style="background:var(--accent-primary);color:var(--accent-primary-text);width:100%;height:100%;display:flex;alignItems:center;justifyContent:center;fontWeight:bold;fontSize:14px">ET</div>';
+                if ((e.target as any).parentElement) {
+                  (e.target as any).parentElement.innerHTML = '<div style="background:var(--accent-primary);color:var(--accent-primary-text);width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px">ET</div>';
+                }
               }}
             />
           </div>
@@ -75,26 +103,9 @@ export function NavBar() {
       </div>
       
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        {Object.keys(names).length > 0 && (
-          <select 
-            value={selectedUser || ''} 
-            onChange={(e) => handleUserChange(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 6,
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer'
-            }}
-          >
-            {Object.entries(names).map(([id, name]) => (
-              <option key={id} value={id}>{name}</option>
-            ))}
-          </select>
-        )}
+        <Suspense fallback={<div style={{ width: 80, height: 32, background: 'var(--bg-secondary)', borderRadius: 6 }} />}>
+          <UserSwitcher />
+        </Suspense>
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }} />
       </div>
     </nav>
