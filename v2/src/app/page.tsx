@@ -1,30 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BentoCard } from '@/components/BentoCard';
-import { UserAvatarToggle } from '@/components/UserAvatarToggle';
 import { ExpenseList } from '@/components/ExpenseList';
 import { useHousehold } from '@/hooks/useHousehold';
 import { useExpenses, ReceiptData } from '@/hooks/useExpenses';
-import { calcTotals, calcBudgetStatus } from '@/lib/finance';
+import { calcTotals } from '@/lib/finance';
 import { AuthScreen } from '@/components/AuthScreen';
 import { ReceiptScanner } from '@/components/ReceiptScanner';
 import { ItemAnalytics } from '@/components/ItemAnalytics';
 import { SpendingBreakdown, DailyTrend } from '@/components/FinanceCharts';
+import { AIInsights } from '@/components/AIInsights';
 
-export default function Home() {
+function DashboardContent() {
+  const searchParams = useSearchParams();
   const { session, household, loading: hLoading } = useHousehold();
   const { expenses, loading: eLoading, softDeleteExpense, saveReceipt } = useExpenses(household?.household_id);
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
 
-  // Auto-select first user if none selected
-  useEffect(() => {
-    if (household && !selectedUser) {
-      const firstId = Object.keys(household.names)[0];
-      if (firstId) setSelectedUser(firstId);
-    }
-  }, [household, selectedUser]);
+  const selectedUser = searchParams.get('u') || (household ? Object.keys(household.names)[0] : null);
 
   const loading = hLoading || (household && eLoading);
 
@@ -46,13 +41,6 @@ export default function Home() {
 
   return (
     <main style={{ padding: '24px 0' }}>
-      <header style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600 }}>ET Expense</h1>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{household.handle}</span>
-        </div>
-      </header>
-
       <div className="bento-grid">
         {showScanner ? (
           <div style={{ gridColumn: 'span 12' }}>
@@ -67,13 +55,8 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <BentoCard colSpan={12} title="Members">
-              <UserAvatarToggle 
-                users={household.names} 
-                selectedId={selectedUser} 
-                onSelect={setSelectedUser} 
-              />
-            </BentoCard>
+            {/* The Intelligence Row */}
+            <AIInsights householdId={household.household_id} />
 
             <div className="order-first-mobile" style={{ gridColumn: 'span 4' }}>
               <BentoCard title="Overview">
@@ -99,13 +82,10 @@ export default function Home() {
 
             <BentoCard colSpan={4} title="Quick Actions">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button className="btn btn-primary">Add Expense</button>
+                <button className="btn btn-primary" onClick={() => alert("Quick manual entry coming soon!")}>Add Expense</button>
                 <button 
                   className="btn btn-secondary" 
-                  onClick={() => {
-                    if (!selectedUser) alert("Please select a user first.");
-                    else setShowScanner(true);
-                  }}
+                  onClick={() => setShowScanner(true)}
                 >
                   Scan Receipt
                 </button>
@@ -119,5 +99,13 @@ export default function Home() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

@@ -1,11 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { useHousehold } from '@/hooks/useHousehold';
 
 export function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { household } = useHousehold();
+  
+  const selectedUser = searchParams.get('u');
+  const names = household?.names || {};
+
+  const handleUserChange = (id: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('u', id);
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   const navItems = [
     { name: 'Dashboard', href: '/' },
@@ -50,7 +63,27 @@ export function NavBar() {
         </div>
       </div>
       
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {Object.keys(names).length > 0 && (
+          <select 
+            value={selectedUser || ''} 
+            onChange={(e) => handleUserChange(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer'
+            }}
+          >
+            {Object.entries(names).map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        )}
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }} />
       </div>
     </nav>
