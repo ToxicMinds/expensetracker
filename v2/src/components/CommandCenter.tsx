@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BentoCard } from './BentoCard';
 
-export function CommandCenter({ onScan, onManual }: { onScan: () => void, onManual: (item: string) => void }) {
+export function CommandCenter({ onScan, onManual, onStatement }: { onScan: () => void, onManual: (item: string) => void, onStatement: () => void }) {
   const [frequent, setFrequent] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,17 +31,25 @@ export function CommandCenter({ onScan, onManual }: { onScan: () => void, onManu
         <div style={{ display: 'flex', gap: 8 }}>
           <button 
             className="btn btn-primary" 
-            style={{ flex: 1, height: 48, fontSize: 16 }}
+            style={{ flex: 1, height: 48, fontSize: 16, padding: '0 8px' }}
             onClick={onScan}
           >
             📸 Scan
           </button>
           <button 
             className="btn btn-secondary" 
-            style={{ flex: 1, height: 48 }}
+            style={{ flex: 1, height: 48, padding: '0 8px' }}
             onClick={() => onManual('')}
           >
             ➕ Manual
+          </button>
+          <button 
+            className="btn btn-secondary" 
+            style={{ flex: 1, height: 48, padding: '0 8px', background: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
+            onClick={onStatement}
+            title="AI Statement Analyzer"
+          >
+            🧠 File
           </button>
         </div>
 

@@ -72,11 +72,16 @@ export function useExpenses(householdId: string | undefined) {
     setLoading(false);
   };
 
-  const addExpense = async (expense: Partial<Expense>) => {
+  const addExpense = async (expense: Partial<Expense> | Partial<Expense>[]) => {
     if (!householdId) return;
+    
+    const payload = Array.isArray(expense) 
+      ? expense.map(e => ({ ...e, household_id: householdId }))
+      : { ...expense, household_id: householdId };
+
     const { error } = await supabase
       .from('expenses')
-      .insert({ ...expense, household_id: householdId });
+      .insert(payload);
     if (error) throw error;
   };
 

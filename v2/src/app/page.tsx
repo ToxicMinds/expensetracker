@@ -9,6 +9,7 @@ import { useExpenses, ReceiptData } from '@/hooks/useExpenses';
 import { calcTotals } from '@/lib/finance';
 import { AuthScreen } from '@/components/AuthScreen';
 import { ReceiptScanner } from '@/components/ReceiptScanner';
+import { StatementScanner } from '@/components/StatementScanner';
 import { ItemAnalytics } from '@/components/ItemAnalytics';
 import { SpendingBreakdown, DailyTrend } from '@/components/FinanceCharts';
 import { AIInsights } from '@/components/AIInsights';
@@ -24,6 +25,7 @@ function DashboardContent() {
   const { session, household, loading: hLoading } = useHousehold();
   const { expenses, loading: eLoading, softDeleteExpense, saveReceipt, addExpense } = useExpenses(household?.household_id);
   const [showScanner, setShowScanner] = useState(false);
+  const [showStatement, setShowStatement] = useState(false);
   const [manualEntry, setManualEntry] = useState<string | null>(null); // null = closed, string = prefill
 
   const selectedUser = searchParams.get('u') || (household ? Object.keys(household.names)[0] : null);
@@ -33,6 +35,16 @@ function DashboardContent() {
     if (!selectedUser || !household) return;
     await saveReceipt(data, selectedUser, household.names[selectedUser]);
     setShowScanner(false);
+  };
+
+  const handleSaveStatement = async (transactions: any[], whoId: string, whoName: string) => {
+    const payload = transactions.map(tx => ({
+      ...tx,
+      who_id: whoId,
+      who: whoName,
+      date: tx.date || new Date().toISOString().slice(0, 10),
+    }));
+    await addExpense(payload);
   };
 
   const handleManualSave = async (entry: any) => {
@@ -56,6 +68,16 @@ function DashboardContent() {
 
   return (
     <main>
+      {/* Statement Scanner Modal */}
+      {showStatement && (
+        <StatementScanner
+          names={household.names}
+          selectedUser={selectedUser || Object.keys(household.names)[0]}
+          onSave={handleSaveStatement}
+          onClose={() => setShowStatement(false)}
+        />
+      )}
+
       {/* Manual Entry Modal */}
       {manualEntry !== null && (
         <ManualEntryModal
@@ -82,6 +104,7 @@ function DashboardContent() {
             <CommandCenter
               onScan={() => setShowScanner(true)}
               onManual={(prefill) => setManualEntry(prefill || '')}
+              onStatement={() => setShowStatement(true)}
             />
 
             {/* ROW 2: Financial Foundation */}

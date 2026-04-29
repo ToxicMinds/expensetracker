@@ -28,8 +28,7 @@ export function AIInsights({ householdId, expenseCount }: { householdId: string 
     const cacheHash = `${householdId}_${expenseCount ?? 0}`;
     try {
       const cached: InsightCache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      const age = Date.now() - (cached?.timestamp || 0);
-      if (cached && age < CACHE_TTL_MS && cached.expenseHash === cacheHash) {
+      if (cached && cached.expenseHash === cacheHash) {
         setInsight(cached.insight);
         setSource('cache');
         setLoading(false);

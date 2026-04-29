@@ -26,7 +26,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: "cover", // Critical for iOS notch / dynamic island
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
     { media: "(prefers-color-scheme: dark)", color: "#0F172A" }

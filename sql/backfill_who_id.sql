@@ -1,53 +1,39 @@
 -- ============================================================
--- v1 who_id Backfill Migration
--- Purpose: Populate who_id on legacy expenses that only have
---          a `who` name string, matching names to app_state config.
--- Safe: Read-only lookup, only updates rows where who_id IS NULL
--- Run in: Supabase SQL Editor (or psql)
+-- Dynamic v1 who_id Backfill Migration
+-- Purpose: Automatically populate who_id for legacy expenses 
+--          by reading the `app_state` config JSON.
+-- Safely maps users like Nikhil -> u1 only for their household.
 -- ============================================================
 
--- Step 1: Preview which expenses will be affected
--- Run this SELECT first to verify before doing the UPDATE
-SELECT 
-  e.id,
-  e.who,
-  e.who_id,
-  e.household_id,
-  e.date,
-  e.amount
-FROM expenses e
-WHERE e.who_id IS NULL 
-  AND e.who IS NOT NULL
-  AND e.is_deleted = false
-ORDER BY e.date DESC
-LIMIT 50;
-
--- Step 2: Inspect your app_state config to find name->id mapping
--- This shows you the names object from each household
-SELECT 
-  id as household_id,
-  config->'names' as names_map
-FROM app_state;
-
--- Step 3: Manual backfill — replace the name->id pairs below with YOUR actual data
--- Example: Nikhil -> u1, Zuzana -> u2 (check Step 2 output first!)
--- Replace 'Nikhil' and 'u1' etc. with your actual names and IDs
-
-UPDATE expenses
-SET who_id = CASE
-  WHEN who ILIKE 'Nikhil'  THEN 'u1'
-  WHEN who ILIKE 'Zuzana'  THEN 'u2'
-  WHEN who ILIKE 'Tom'     THEN 'u3'
-  WHEN who ILIKE 'Jur'     THEN 'u4'
-  ELSE who_id  -- leave unchanged if no match
-END
-WHERE who_id IS NULL
-  AND who IS NOT NULL
-  AND is_deleted = false;
-
--- Step 4: Verify the fix — should return 0 rows with who_id IS NULL
-SELECT COUNT(*) as unmatched_count
-FROM expenses
-WHERE who_id IS NULL 
-  AND who IS NOT NULL
-  AND is_deleted = false;
+DO $$
+DECLARE
+    r RECORD;
+    member_id TEXT;
+    member_name TEXT;
+    matched_count INT := 0;
+BEGIN
+    -- Iterate through every household in app_state
+    FOR r IN SELECT id AS household_id, config->'names' AS names FROM app_state WHERE config->'names' IS NOT NULL
+    LOOP
+        -- Iterate through the key-value pairs in the JSON 'names' object
+        -- e.g. "u1": "Nikhil", "u2": "Zuzana"
+        FOR member_id, member_name IN SELECT * FROM jsonb_each_text(r.names)
+        LOOP
+            -- Update expenses for this specific household where the legacy string matches
+            UPDATE expenses
+            SET who_id = member_id
+            WHERE household_id = r.household_id
+              AND who_id IS NULL
+              AND who ILIKE member_name
+              AND is_deleted = false;
+              
+            -- Log the update for debugging
+            GET DIAGNOSTICS matched_count = ROW_COUNT;
+            IF matched_count > 0 THEN
+                RAISE NOTICE 'Household %: Mapped % legacy records for % -> %', r.household_id, matched_count, member_name, member_id;
+            END IF;
+        END LOOP;
+    END LOOP;
+    
+    RAISE NOTICE 'Migration completed successfully.';
+END $$;

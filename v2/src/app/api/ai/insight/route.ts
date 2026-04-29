@@ -8,21 +8,20 @@ export async function GET(req: Request) {
   const session = driver.session();
   try {
     // Pull ALL merchants (no LIMIT), plus category distribution and time patterns
-    const [merchantResult, categoryResult] = await Promise.all([
-      session.run(`
-        MATCH (m:Merchant)-[:PROCESSED]->(t:Transaction)
-        WITH m.name AS merchant, count(t) AS visits, sum(t.amount) AS total
-        ORDER BY visits DESC
-        RETURN collect({merchant: merchant, visits: toInteger(visits), total: total}) AS topMerchants
-      `),
-      session.run(`
-        MATCH (t:Transaction)
-        WHERE t.category IS NOT NULL
-        WITH t.category AS category, count(t) AS count, sum(t.amount) AS total
-        ORDER BY total DESC
-        RETURN collect({category: category, count: toInteger(count), total: total}) AS categories
-      `)
-    ]);
+    const merchantResult = await session.run(`
+      MATCH (m:Merchant)-[:PROCESSED]->(t:Transaction)
+      WITH m.name AS merchant, count(t) AS visits, sum(t.amount) AS total
+      ORDER BY visits DESC
+      RETURN collect({merchant: merchant, visits: toInteger(visits), total: total}) AS topMerchants
+    `);
+    
+    const categoryResult = await session.run(`
+      MATCH (t:Transaction)
+      WHERE t.category IS NOT NULL
+      WITH t.category AS category, count(t) AS count, sum(t.amount) AS total
+      ORDER BY total DESC
+      RETURN collect({category: category, count: toInteger(count), total: total}) AS categories
+    `);
 
     const facts = merchantResult.records[0]?.get('topMerchants') || [];
     const categories = categoryResult.records[0]?.get('categories') || [];

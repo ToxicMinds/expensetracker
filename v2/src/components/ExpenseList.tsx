@@ -4,11 +4,6 @@ import { useState } from 'react';
 import { Expense } from '@/lib/finance';
 import { CategoryPill } from './CategoryPill';
 
-const CATEGORIES = [
-  'All', 'Groceries', 'Food', 'Transport', 'Housing', 'Utilities',
-  'Health', 'Clothing', 'Entertainment', 'Savings', 'Adjustment', 'Other'
-];
-
 type ViewMode = 'list' | 'calendar';
 
 function CalendarView({ expenses }: { expenses: Expense[] }) {
@@ -37,13 +32,11 @@ function CalendarView({ expenses }: { expenses: Expense[] }) {
 
   return (
     <div>
-      {/* Day labels */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
         {['M','T','W','T','F','S','S'].map((d, i) => (
           <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 0' }}>{d}</div>
         ))}
       </div>
-      {/* Calendar grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {Array.from({ length: paddingDays }).map((_, i) => <div key={`pad-${i}`} />)}
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
@@ -76,7 +69,6 @@ function CalendarView({ expenses }: { expenses: Expense[] }) {
           );
         })}
       </div>
-      {/* Day detail */}
       {selectedDay && dayExpenses[selectedDay] && (
         <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-hover)', borderRadius: 12 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8 }}>
@@ -96,52 +88,70 @@ function CalendarView({ expenses }: { expenses: Expense[] }) {
 
 export function ExpenseList({ expenses, onDelete }: { expenses: Expense[]; onDelete: (id: string) => void }) {
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [whoFilter, setWhoFilter] = useState('All');
+  const [whatFilter, setWhatFilter] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const uniqueCategories = ['All', ...Array.from(new Set(expenses.map(e => e.category).filter(Boolean)))];
+  const uniqueWhos = ['All', ...Array.from(new Set(expenses.map(e => e.who).filter(Boolean)))];
 
-  const filtered = categoryFilter === 'All'
-    ? expenses
-    : expenses.filter(e => e.category === categoryFilter);
+  const filtered = expenses.filter(e => {
+    if (categoryFilter !== 'All' && e.category !== categoryFilter) return false;
+    if (whoFilter !== 'All' && e.who !== whoFilter) return false;
+    if (whatFilter && !(e.description?.toLowerCase().includes(whatFilter.toLowerCase()) || e.category.toLowerCase().includes(whatFilter.toLowerCase()))) return false;
+    return true;
+  });
+
+  const selectStyle: React.CSSProperties = {
+    padding: '6px 10px',
+    borderRadius: 8,
+    border: '1px solid var(--border-color)',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    fontSize: 12,
+    flex: 1,
+    minWidth: 100,
+    outline: 'none'
+  };
 
   return (
     <div>
-      {/* Controls Row */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Category filter pills */}
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', flex: 1 }}>
-          {uniqueCategories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 20,
-                border: '1px solid var(--border-color)',
-                background: categoryFilter === cat ? 'var(--accent-primary)' : 'transparent',
-                color: categoryFilter === cat ? 'var(--accent-primary-text)' : 'var(--text-secondary)',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                fontFamily: 'inherit'
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-        {/* View toggle */}
-        <button
-          onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
+      {/* Search & Filter Row */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+        <input 
+          type="text" 
+          placeholder="🔍 Search descriptions..." 
+          value={whatFilter}
+          onChange={e => setWhatFilter(e.target.value)}
           style={{
-            padding: '4px 10px', borderRadius: 8, border: '1px solid var(--border-color)',
-            background: 'transparent', color: 'var(--text-secondary)', fontSize: 11,
-            fontWeight: 600, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit'
+            width: '100%',
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--border-color)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            fontSize: 13,
+            outline: 'none'
           }}
-        >
-          {viewMode === 'list' ? '📅 Calendar' : '📋 List'}
-        </button>
+        />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={selectStyle}>
+            {uniqueCategories.map(c => <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>)}
+          </select>
+          <select value={whoFilter} onChange={e => setWhoFilter(e.target.value)} style={selectStyle}>
+            {uniqueWhos.map(w => <option key={w} value={w}>{w === 'All' ? 'Everyone' : w}</option>)}
+          </select>
+          <button
+            onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
+            style={{
+              padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-color)',
+              background: 'transparent', color: 'var(--text-secondary)', fontSize: 12,
+              fontWeight: 600, cursor: 'pointer', flexShrink: 0
+            }}
+          >
+            {viewMode === 'list' ? '📅 Calendar' : '📋 List'}
+          </button>
+        </div>
       </div>
 
       {viewMode === 'calendar' ? (
@@ -149,7 +159,9 @@ export function ExpenseList({ expenses, onDelete }: { expenses: Expense[]; onDel
       ) : (
         <>
           {filtered.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '12px 0' }}>No expenses for this filter.</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '12px 0', textAlign: 'center' }}>
+              No expenses match your filters.
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {filtered.map(exp => (
@@ -177,6 +189,7 @@ export function ExpenseList({ expenses, onDelete }: { expenses: Expense[]; onDel
                     <button
                       onClick={() => exp.id && onDelete(exp.id)}
                       style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}
+                      title="Delete"
                     >×</button>
                   </div>
                 </div>
