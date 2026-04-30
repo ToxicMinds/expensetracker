@@ -88,6 +88,11 @@ export function ReceiptScanner({
           selected: true
         }))
       });
+      
+      if (!parsed.date) {
+        console.warn("Date missing from eKasa response, falling back to today.");
+      }
+
       setStep('review');
     } catch (e: any) {
       setError(e.message);

@@ -17,10 +17,21 @@ export async function POST(req: Request) {
     const receipt = ekasaData.receipt || ekasaData;
     const store = receipt.organizationName || receipt.merchantName || receipt.name || 'Slovak Receipt';
     
+    // Improved Date Extraction
     let date = null;
-    const rawDate = receipt.createDate || receipt.issueDate || receipt.date || '';
-    const dateMatch = String(rawDate).match(/\d{4}-\d{2}-\d{2}/);
-    if (dateMatch) date = dateMatch[0];
+    const rawDate = String(receipt.createDate || receipt.issueDate || receipt.date || '');
+    
+    // Try YYYY-MM-DD (ISO)
+    const isoMatch = rawDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      date = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    } else {
+      // Try DD.MM.YYYY (Slovak common)
+      const skMatch = rawDate.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+      if (skMatch) {
+        date = `${skMatch[3]}-${skMatch[2]}-${skMatch[1]}`;
+      }
+    }
 
     const rawItems = receipt.items || receipt.receiptItems || receipt.lines || [];
     const items = rawItems.map((it: any) => ({
