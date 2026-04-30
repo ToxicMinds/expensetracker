@@ -1,61 +1,85 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BentoCard } from './BentoCard';
 
-const CACHE_KEY = 'et_ai_insight_cache';
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-interface InsightCache {
-  insight: string;
-  timestamp: number;
-  expenseHash: string;
-}
-
-export function AIInsights({ householdId, expenseCount, updateState, household }: { householdId: string | undefined, expenseCount?: number, updateState?: any, household?: any }) {
+export function AIInsights({
+  householdId,
+  expenseCount,
+  updateState,
+  household
+}: {
+  householdId: string | undefined;
+  expenseCount?: number;
+  updateState?: (s: any) => Promise<void>;
+  household?: any;
+}) {
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<'cache' | 'live' | 'error'>('live');
 
+  // Track the last hash we fetched for — prevents re-fetching on unrelated re-renders
+  const lastFetchedHash = useRef<string | null>(null);
+  const isFetching = useRef(false);
+
+  // Stable cache key: only changes when household or expense count changes
+  const cacheHash = householdId ? `${householdId}_${expenseCount ?? 0}` : null;
+
   useEffect(() => {
-    if (householdId && household) fetchInsight();
-  }, [householdId, expenseCount, household]);
+    if (!householdId || !household || !cacheHash) return;
 
-  async function fetchInsight(forceRefresh = false) {
-    if (!householdId) return;
-    setLoading(true);
-
-    const cacheHash = `${householdId}_${expenseCount ?? 0}`;
-    
-    // 1. Check Supabase state first
-    if (!forceRefresh && household?.ai_insight?.hash === cacheHash) {
-      setInsight(household.ai_insight.insight);
+    // 1. Serve from Supabase-backed cache if hash matches — no API call needed
+    if (household?.config?.ai_insight?.hash === cacheHash) {
+      setInsight(household.config.ai_insight.insight);
       setSource('cache');
       setLoading(false);
+      lastFetchedHash.current = cacheHash;
       return;
     }
 
-    // 2. Cache miss — call the API
+    // 2. Don't re-fetch if we already fetched this exact hash
+    if (lastFetchedHash.current === cacheHash) return;
+
+    // 3. Don't fire concurrent fetches
+    if (isFetching.current) return;
+
+    fetchInsight(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [householdId, cacheHash]);
+
+  async function fetchInsight(forceRefresh = false) {
+    if (!householdId || isFetching.current) return;
+
+    if (!forceRefresh && lastFetchedHash.current === cacheHash) return;
+
+    isFetching.current = true;
+    setLoading(true);
+
     try {
-      const response = await fetch(`/api/ai/insight?householdId=${householdId}`);
+      const response = await fetch(`/api/ai/insight?householdId=${encodeURIComponent(householdId)}`);
       const data = await response.json();
 
       if (data.success && data.insight) {
         setInsight(data.insight);
         setSource('live');
-        if (updateState) {
-          updateState({ ai_insight: { insight: data.insight, hash: cacheHash } });
+        lastFetchedHash.current = cacheHash;
+        // Persist to Supabase so other devices get it from cache
+        if (updateState && cacheHash) {
+          updateState({ ai_insight: { insight: data.insight, hash: cacheHash } }).catch(() => {});
         }
       } else {
-        const reason = data.error || 'Neo4j returned no merchants — run the sync endpoint first.';
-        setInsight(`⚠️ Graph not ready: ${reason}`);
+        // API returned 200 but no meaningful insight — show a soft message, don't retry
+        setInsight('💡 Your spending patterns are being analyzed. Add more expenses and sync to see AI-powered insights.');
         setSource('error');
+        lastFetchedHash.current = cacheHash; // Mark as fetched so we don't loop
       }
     } catch (e: any) {
-      setInsight(`⚠️ Could not reach the AI service: ${e.message}`);
+      setInsight('⚠️ Could not reach the AI service. Check your connection and try again.');
       setSource('error');
+      // Do NOT mark lastFetchedHash on network error — allow manual refresh
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }
 
@@ -76,26 +100,24 @@ export function AIInsights({ householdId, expenseCount, updateState, household }
           }}>
             💡
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Graph & AI Insight</p>
               {source === 'cache' && (
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-hover)', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-hover)', padding: '2px 6px', borderRadius: 4, fontWeight: 500, flexShrink: 0 }}>
                   cached
                 </span>
               )}
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, wordBreak: 'break-word' }}>
               {insight}
             </p>
-            {(
-              <button
-                onClick={() => fetchInsight(true)}
-                style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
-              >
-                ↻ Refresh insight
-              </button>
-            )}
+            <button
+              onClick={() => fetchInsight(true)}
+              style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+            >
+              ↻ Refresh insight
+            </button>
           </div>
         </div>
       )}

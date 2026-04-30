@@ -52,12 +52,12 @@ export default function SettingsPage() {
 
   return (
     <main style={{ padding: '24px', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-      <header style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <header style={{ maxWidth: 1000, margin: '0 auto', marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ fontSize: 24, fontWeight: 600 }}>Settings</h1>
-        <Link href="/" className="btn btn-secondary">Back to Dashboard</Link>
+        <Link href="/" className="btn btn-secondary">← Back to Dashboard</Link>
       </header>
 
-      <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 24 }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto' }} className="bento-grid">
         
         {/* Household Identity */}
         <BentoCard colSpan={12} title="Household Identity">
@@ -150,16 +150,18 @@ export default function SettingsPage() {
         </BentoCard>
 
         {/* Save Action */}
-        <div style={{ gridColumn: 'span 12', display: 'flex', justifyContent: 'flex-end', gap: 12, padding: '24px 0' }}>
-          <button 
-            className="btn btn-primary" 
-            style={{ padding: '12px 32px' }}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Save All Changes'}
-          </button>
-        </div>
+        <BentoCard colSpan={12}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button 
+              className="btn btn-primary" 
+              style={{ padding: '12px 32px' }}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save All Changes'}
+            </button>
+          </div>
+        </BentoCard>
 
       </div>
     </main>

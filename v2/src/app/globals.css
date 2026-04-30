@@ -400,18 +400,20 @@ body {
 
 /* ============================================
    MOBILE OVERFLOW GUARD
-   Always clamp any flex/grid children on mobile
+   Targeted — only clamp content, not layout containers
    ============================================ */
 @media (max-width: 640px) {
-  * {
+  img, video, canvas, svg {
     max-width: 100%;
-  }
-  img, video {
     height: auto;
+  }
+  /* Text content should wrap, not overflow */
+  p, span, h1, h2, h3, h4, h5, h6, li, td, th {
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   /* Allow horizontal scrolling only inside explicit scroll containers */
   .h-scroll {
-    max-width: none;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
