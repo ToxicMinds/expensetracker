@@ -66,6 +66,25 @@ function DashboardContent() {
   const totalBudget = Object.values(household.budgets || {}).reduce((a: number, b: unknown) => a + Number(b), 0);
   const monthlySavingsGoal = household.goals?.monthly_savings || 500;
 
+  if (Object.keys(household.names || {}).length === 0) {
+    return (
+      <main style={{ padding: '48px 24px', maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
+        <BentoCard colSpan={12} title="Welcome to Synculariti!">
+          <div style={{ padding: '32px 0' }}>
+            <h2 style={{ fontSize: 24, marginBottom: 16 }}>Let's set up your household</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 32, lineHeight: 1.6 }}>
+              It looks like you don't have any members in your household yet. 
+              Before you can start tracking expenses, you need to add yourself (and anyone else) to the household.
+            </p>
+            <a href="/settings" className="btn btn-primary" style={{ padding: '14px 32px', fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
+              Go to Settings →
+            </a>
+          </div>
+        </BentoCard>
+      </main>
+    );
+  }
+
   return (
     <main>
       {/* Statement Scanner Modal */}

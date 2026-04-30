@@ -38,6 +38,16 @@ export default function SettingsPage() {
     setBudgets({ ...budgets, [cat]: limit });
   };
 
+  const addMember = () => {
+    // Find the next available uX ID
+    const currentKeys = Object.keys(names);
+    let nextIdNum = 1;
+    while (currentKeys.includes(`u${nextIdNum}`)) {
+      nextIdNum++;
+    }
+    setNames({ ...names, [`u${nextIdNum}`]: `New Person ${nextIdNum}` });
+  };
+
   if (loading || !household) return <div style={{ padding: 48, textAlign: 'center' }}>Loading Settings...</div>;
 
   return (
@@ -86,6 +96,13 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+          <button 
+            onClick={addMember} 
+            className="btn btn-secondary" 
+            style={{ marginTop: 16, width: '100%', fontSize: 13, borderStyle: 'dashed' }}
+          >
+            + Add Member
+          </button>
         </BentoCard>
 
         {/* Category & Budget Management */}
