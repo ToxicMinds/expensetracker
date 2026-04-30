@@ -2,27 +2,33 @@ import { NextResponse } from 'next/server';
 import { getNeo4jDriver } from '@/lib/neo4j';
 
 export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const householdId = searchParams.get('householdId');
+  
+  if (!householdId) {
+    return NextResponse.json({ error: 'householdId is required' }, { status: 400 });
+  }
+
   const driver = getNeo4jDriver();
   if (!driver) return NextResponse.json({ error: 'Neo4j not configured' }, { status: 500 });
 
   const session = driver.session();
   try {
-    // Pull ALL merchants (no LIMIT), plus category distribution and time patterns
     const merchantResult = await session.run(`
-      MATCH (m:Merchant)-[:PROCESSED]->(t:Transaction)
+      MATCH (m:Merchant)-[:PROCESSED]->(t:Transaction {household_id: $householdId})
       WITH m.name AS merchant, count(t) AS visits, sum(t.amount) AS total
       ORDER BY visits DESC
       LIMIT 15
       RETURN collect({merchant: merchant, visits: toInteger(visits), total: total}) AS topMerchants
-    `);
+    `, { householdId });
     
     const categoryResult = await session.run(`
-      MATCH (t:Transaction)
+      MATCH (t:Transaction {household_id: $householdId})
       WHERE t.category IS NOT NULL
       WITH t.category AS category, count(t) AS count, sum(t.amount) AS total
       ORDER BY total DESC
       RETURN collect({category: category, count: toInteger(count), total: total}) AS categories
-    `);
+    `, { householdId });
 
     const facts = merchantResult.records[0]?.get('topMerchants') || [];
     const categories = categoryResult.records[0]?.get('categories') || [];

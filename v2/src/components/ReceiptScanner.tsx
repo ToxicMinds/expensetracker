@@ -5,6 +5,8 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import { BentoCard } from './BentoCard';
 import { CategoryPill } from './CategoryPill';
 
+import { fetchWithRetry, systemLog } from '@/lib/utils';
+
 interface ReceiptItem {
   name: string;
   amount: number;
@@ -55,17 +57,17 @@ export function ReceiptScanner({
       const receiptId = extractEkasaId(decodedText);
       if (!receiptId) throw new Error("Could not find a valid eKasa ID in this QR code.");
 
-      // 2. Fetch from eKasa Proxy (Next.js Rewrite)
-      const response = await fetch(`/ekasa-proxy/${receiptId}`, {
-        method: 'GET', // Standard eKasa API is GET for fetching data
+      // 2. Fetch from eKasa Proxy with Retry
+      const response = await fetchWithRetry(`/ekasa-proxy/${receiptId}`, {
+        method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
       
       if (!response.ok) throw new Error("Failed to fetch receipt data.");
       const ekasaData = await response.json();
 
-      // 3. Categorize with Groq
-      const groqResponse = await fetch('/api/groq', {
+      // 3. Categorize with Groq with Retry
+      const groqResponse = await fetchWithRetry('/api/groq', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ekasaData })
@@ -87,6 +89,7 @@ export function ReceiptScanner({
     } catch (e: any) {
       setError(e.message);
       setStep('scan');
+      systemLog('ekasa_scan_error', e);
     } finally {
       setLoading(false);
     }

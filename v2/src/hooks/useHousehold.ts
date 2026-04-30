@@ -11,6 +11,7 @@ export interface AppState {
   budgets: Record<string, number>;
   memory: Record<string, string>;
   goals: Record<string, any>; // Added for v1 compatibility
+  ai_insight?: { insight: string; hash: string };
 }
 
 export function useHousehold() {
@@ -65,7 +66,8 @@ export function useHousehold() {
         income: config.income || {},
         budgets: config.budgets || {},
         memory: config.memory || {},
-        goals: config.goals || { monthly_savings: 500 } // Fallback to 500 if missing
+        goals: config.goals || { monthly_savings: 500 }, // Fallback to 500 if missing
+        ai_insight: config.ai_insight
       });
     } catch (e) {
       console.error('Error fetching household state:', e);
@@ -89,7 +91,8 @@ export function useHousehold() {
       income: updates.income || household.income,
       budgets: updates.budgets || household.budgets,
       memory: updates.memory || household.memory,
-      goals: updates.goals || household.goals
+      goals: updates.goals || household.goals,
+      ai_insight: updates.ai_insight || household.ai_insight
     };
 
     const { error } = await supabase

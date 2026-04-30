@@ -12,46 +12,41 @@ interface InsightCache {
   expenseHash: string;
 }
 
-export function AIInsights({ householdId, expenseCount }: { householdId: string | undefined, expenseCount?: number }) {
+export function AIInsights({ householdId, expenseCount, updateState, household }: { householdId: string | undefined, expenseCount?: number, updateState?: any, household?: any }) {
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<'cache' | 'live' | 'error'>('live');
 
   useEffect(() => {
-    if (householdId) fetchInsight();
-  }, [householdId, expenseCount]);
+    if (householdId && household) fetchInsight();
+  }, [householdId, expenseCount, household]);
 
-  async function fetchInsight() {
+  async function fetchInsight(forceRefresh = false) {
+    if (!householdId) return;
     setLoading(true);
 
-    // 1. Check cache first
     const cacheHash = `${householdId}_${expenseCount ?? 0}`;
-    try {
-      const cached: InsightCache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      if (cached && cached.expenseHash === cacheHash) {
-        setInsight(cached.insight);
-        setSource('cache');
-        setLoading(false);
-        return;
-      }
-    } catch (_) {}
+    
+    // 1. Check Supabase state first
+    if (!forceRefresh && household?.ai_insight?.hash === cacheHash) {
+      setInsight(household.ai_insight.insight);
+      setSource('cache');
+      setLoading(false);
+      return;
+    }
 
     // 2. Cache miss — call the API
     try {
-      const response = await fetch('/api/ai/insight');
+      const response = await fetch(`/api/ai/insight?householdId=${householdId}`);
       const data = await response.json();
 
       if (data.success && data.insight) {
-        const newCache: InsightCache = {
-          insight: data.insight,
-          timestamp: Date.now(),
-          expenseHash: cacheHash
-        };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
         setInsight(data.insight);
         setSource('live');
+        if (updateState) {
+          updateState({ ai_insight: { insight: data.insight, hash: cacheHash } });
+        }
       } else {
-        // Surface the actual error reason rather than hiding it
         const reason = data.error || 'Neo4j returned no merchants — run the sync endpoint first.';
         setInsight(`⚠️ Graph not ready: ${reason}`);
         setSource('error');
@@ -95,7 +90,7 @@ export function AIInsights({ householdId, expenseCount }: { householdId: string 
             </p>
             {(
               <button
-                onClick={() => { localStorage.removeItem(CACHE_KEY); fetchInsight(); }}
+                onClick={() => fetchInsight(true)}
                 style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
               >
                 ↻ Refresh insight

@@ -101,7 +101,7 @@ function DashboardContent() {
         ) : (
           <>
             {/* ROW 1: Brains + Command */}
-            <AIInsights householdId={household.household_id} expenseCount={expenses.length} />
+            <AIInsights householdId={household.household_id} expenseCount={expenses.length} updateState={updateState} household={household} />
             <CommandCenter
               onScan={() => setShowScanner(true)}
               onManual={(prefill) => setManualEntry(prefill || {})}

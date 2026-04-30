@@ -52,15 +52,16 @@ export async function GET(req: Request) {
             }
             
             MERGE (t:Transaction {id: $id})
-            ON CREATE SET t.amount = $amount, t.date = $date, t.category = $category
-            ON MATCH SET t.amount = $amount, t.date = $date, t.category = $category
+            ON CREATE SET t.amount = $amount, t.date = $date, t.category = $category, t.household_id = $household_id
+            ON MATCH SET t.amount = $amount, t.date = $date, t.category = $category, t.household_id = $household_id
             MERGE (m)-[:PROCESSED]->(t)
           `, {
             rawName,
             id: exp.id,
             amount: Number(exp.amount),
             date: exp.date,
-            category: exp.category
+            category: exp.category,
+            household_id: exp.household_id
           });
           syncCount++;
         }
