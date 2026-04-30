@@ -65,7 +65,7 @@ You can verify that the system is not calling Groq unnecessarily by:
 
 ### 4.1 Advanced Receipt Pipeline (eKasa + Groq)
 1. **QR Capture:** `html5-qrcode` extracts the Slovak eKasa ID (OPD).
-2. **Vercel Proxy:** The request is proxied through `/ekasa-proxy/*` (configured in `v2/vercel.json`) to the official Slovak Gov API. This bypasses CORS and IP-based regional blocks.
+2. **Regional API Proxy:** The request is processed by `/api/ekasa`. This is a portable Next.js API route pinned to the `fra1` (Frankfurt) region. It performs a POST request to the Slovak Gov's `/receipt/find` endpoint, bypassing CORS and Slovak regional IP blocks while remaining infrastructure-agnostic.
 3. **AI Parsing & Categorization:** The raw eKasa JSON is sent to `/api/ai/parse-receipt`. This endpoint uses a **Llama 3.3 70B** model on Groq to:
    - Normalize product names.
    - Map items to the household's specific category list.
