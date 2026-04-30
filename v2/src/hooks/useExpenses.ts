@@ -75,10 +75,13 @@ export function useExpenses(householdId: string | undefined) {
   const addExpense = async (expense: Partial<Expense> | Partial<Expense>[]) => {
     if (!householdId) return;
 
-    const normalize = (e: Partial<Expense> & { merchant?: string }) => ({
-      ...e,
-      household_id: householdId,
-    });
+    const normalize = (e: Partial<Expense> & { merchant?: string }) => {
+      const { merchant, ...pureExpense } = e;
+      return {
+        ...pureExpense,
+        household_id: householdId,
+      };
+    };
 
     const payload = Array.isArray(expense)
       ? expense.map(e => normalize(e))
@@ -156,9 +159,12 @@ export function useExpenses(householdId: string | undefined) {
   const updateExpense = async (id: string, expense: Partial<Expense> & { merchant?: string }) => {
     if (!householdId) return;
 
+    // Strip 'merchant' before sending to Supabase (it's for Neo4j only)
+    const { merchant, ...pureExpense } = expense;
+
     const { error } = await supabase
       .from('expenses')
-      .update({ ...expense, household_id: householdId })
+      .update({ ...pureExpense, household_id: householdId })
       .eq('id', id);
 
     if (error) throw error;

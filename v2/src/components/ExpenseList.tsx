@@ -1,10 +1,123 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Expense } from '@/lib/finance';
 import { CategoryPill } from './CategoryPill';
 
 type ViewMode = 'list' | 'calendar';
+
+/**
+ * SwipeableRow: Replicates the v1 mobile UX.
+ * Left swipe reveals Edit/Delete.
+ */
+function SwipeableRow({ exp, onDelete, onEdit }: { 
+  exp: Expense; 
+  onDelete: (id: string) => void;
+  onEdit: (exp: Expense) => void;
+}) {
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const startX = useRef(0);
+  const isDragging = useRef(false);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    isDragging.current = true;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - startX.current;
+    // Only allow left swipe (negative offset)
+    if (diff < 0) {
+      setSwipeOffset(Math.max(diff, -140)); // Max reveal 140px
+    } else {
+      setSwipeOffset(0);
+    }
+  };
+
+  const onTouchEnd = () => {
+    isDragging.current = false;
+    // Snap to open or closed
+    if (swipeOffset < -70) {
+      setSwipeOffset(-140);
+    } else {
+      setSwipeOffset(0);
+    }
+  };
+
+  const handleDelete = () => {
+    if (exp.id && window.confirm('Are you sure you want to delete this expense?')) {
+      onDelete(exp.id);
+      setSwipeOffset(0);
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--border-color)' }}>
+      {/* Action Buttons (Hidden Underneath) */}
+      <div style={{
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: 140,
+        display: 'flex',
+        alignItems: 'stretch'
+      }}>
+        <button 
+          onClick={() => { onEdit(exp); setSwipeOffset(0); }}
+          style={{ flex: 1, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+        >
+          Edit
+        </button>
+        <button 
+          onClick={handleDelete}
+          style={{ flex: 1, background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+        >
+          Delete
+        </button>
+      </div>
+
+      {/* Main Content (Swipeable Layer) */}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 0',
+          background: 'var(--bg-card)',
+          transform: `translateX(${swipeOffset}px)`,
+          transition: isDragging.current ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          position: 'relative',
+          zIndex: 2,
+          cursor: 'grab'
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CategoryPill category={exp.category} />
+            <span style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {exp.description || 'Unnamed Expense'}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', gap: 6 }}>
+            <span>{exp.date}</span>
+            {exp.who && <><span>·</span><span>{exp.who}</span></>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 12 }}>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>€{Number(exp.amount).toFixed(2)}</span>
+          {/* Subtle indicator for desktop users or to hint swipe */}
+          <div style={{ width: 4, height: 20, background: 'var(--border-color)', borderRadius: 2, marginLeft: 4, opacity: 0.5 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CalendarView({ expenses }: { expenses: Expense[] }) {
   const now = new Date();
@@ -169,39 +282,12 @@ export function ExpenseList({ expenses, onDelete, onEdit }: {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {filtered.map(exp => (
-                <div
-                  key={exp.id}
-                  style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '11px 0', borderBottom: '1px solid var(--border-color)'
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <CategoryPill category={exp.category} />
-                      <span style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {exp.description || 'Unnamed Expense'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', gap: 6 }}>
-                      <span>{exp.date}</span>
-                      {exp.who && <><span>·</span><span>{exp.who}</span></>}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>€{Number(exp.amount).toFixed(2)}</span>
-                    <button
-                      onClick={() => onEdit(exp)}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}
-                      title="Edit"
-                    >✏️</button>
-                    <button
-                      onClick={() => exp.id && onDelete(exp.id)}
-                      style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}
-                      title="Delete"
-                    >×</button>
-                  </div>
-                </div>
+                <SwipeableRow 
+                  key={exp.id} 
+                  exp={exp} 
+                  onDelete={onDelete} 
+                  onEdit={onEdit} 
+                />
               ))}
             </div>
           )}
