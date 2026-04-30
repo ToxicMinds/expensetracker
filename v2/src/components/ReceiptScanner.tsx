@@ -22,9 +22,11 @@ interface ReceiptData {
 }
 
 export function ReceiptScanner({ 
-  onSave 
+  onSave,
+  categories = []
 }: { 
-  onSave: (data: ReceiptData) => Promise<void> 
+  onSave: (data: ReceiptData) => Promise<void>;
+  categories?: string[];
 }) {
   const [step, setStep] = useState<'scan' | 'processing' | 'review'>('scan');
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -67,10 +69,10 @@ export function ReceiptScanner({
       const ekasaData = await response.json();
 
       // 3. Categorize with Groq with Retry
-      const groqResponse = await fetchWithRetry('/api/groq', {
+      const groqResponse = await fetchWithRetry('/api/ai/parse-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ekasaData })
+        body: JSON.stringify({ ekasaData, categories })
       });
 
       if (!groqResponse.ok) throw new Error("AI Categorization failed.");

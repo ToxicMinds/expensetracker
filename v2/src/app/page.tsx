@@ -115,7 +115,10 @@ function DashboardContent() {
       <div className="bento-grid">
         {showScanner ? (
           <div style={{ gridColumn: 'span 12' }}>
-            <ReceiptScanner onSave={handleSaveReceipt} />
+            <ReceiptScanner 
+              onSave={handleSaveReceipt} 
+              categories={household.budgets ? Object.keys(household.budgets) : []}
+            />
             <button className="btn btn-secondary" style={{ marginTop: 12, width: '100%' }} onClick={() => setShowScanner(false)}>
               ← Back to Dashboard
             </button>

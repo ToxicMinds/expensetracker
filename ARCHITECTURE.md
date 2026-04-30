@@ -64,10 +64,14 @@ You can verify that the system is not calling Groq unnecessarily by:
 ## 4. Operational Workflows
 
 ### 4.1 Advanced Receipt Pipeline (eKasa + Groq)
-1. **QR Capture:** `html5-qrcode` extracts the Slovak eKasa ID.
-2. **Vercel Proxy:** The request is proxied through `/ekasa-proxy/*` to bypass CORS and Slovak Gov API IP restrictions.
-3. **AI Itemization:** Groq parses the raw items, normalizes Slovak product names (e.g., "Kup. šunka" -> "Groceries"), and assigns categories.
-4. **Graph Normalization:** Upon save, the store name is normalized in Neo4j to link fragmented merchant names to parent Brands (e.g., "Lidl #142" -> "Lidl").
+1. **QR Capture:** `html5-qrcode` extracts the Slovak eKasa ID (OPD).
+2. **Vercel Proxy:** The request is proxied through `/ekasa-proxy/*` (configured in `v2/vercel.json`) to the official Slovak Gov API. This bypasses CORS and IP-based regional blocks.
+3. **AI Parsing & Categorization:** The raw eKasa JSON is sent to `/api/ai/parse-receipt`. This endpoint uses a **Llama 3.3 70B** model on Groq to:
+   - Normalize product names.
+   - Map items to the household's specific category list.
+   - Return a clean, itemized JSON structure.
+4. **Graph Normalization:** Upon save, the store name is normalized in Neo4j to link fragmented merchant names to parent Brands.
+
 
 ### 4.2 Manual Entry & Data Quality
 V2 features an improved **Store/Merchant vs. Description** separation.
