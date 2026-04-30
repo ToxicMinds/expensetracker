@@ -12,16 +12,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const receiptId = params.id;
+  const { id } = await params;
 
-  if (!receiptId) {
+  if (!id) {
     return NextResponse.json({ error: 'Missing Receipt ID' }, { status: 400 });
   }
 
   try {
-    const targetUrl = `https://ekasa.financnasprava.sk/mdu/api/v1/opd/${receiptId}`;
+    const targetUrl = `https://ekasa.financnasprava.sk/mdu/api/v1/opd/${id}`;
     
     const response = await fetch(targetUrl, {
       method: 'GET',
