@@ -30,47 +30,7 @@ function ThemeToggle() {
   );
 }
 
-function UserSwitcher() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { household } = useHousehold();
-  
-  const selectedUser = searchParams.get('u');
-  const names = household?.names || {};
-
-  const handleUserChange = (id: string) => {
-    const params = new URLSearchParams(Array.from(searchParams.entries()));
-    params.set('u', id);
-    router.push(`${pathname}?${params.toString()}`);
-  };
-
-  if (Object.keys(names).length === 0) return null;
-
-  return (
-    <select 
-      value={selectedUser || Object.keys(names)[0]} 
-      onChange={(e) => handleUserChange(e.target.value)}
-      style={{
-        padding: '6px 10px',
-        borderRadius: 10,
-        border: '1px solid var(--border-color)',
-        background: 'var(--bg-secondary)',
-        color: 'var(--text-primary)',
-        fontSize: 13,
-        fontWeight: 600,
-        cursor: 'pointer',
-        maxWidth: 120
-      }}
-    >
-      {Object.entries(names).map(([id, name]) => (
-        <option key={id} value={id}>{name as string}</option>
-      ))}
-    </select>
-  );
-}
-
-function MonthSwitcher({ createdAt }: { createdAt?: string }) {
+function SwitcherGroup({ createdAt, names }: { createdAt?: string, names?: Record<string, string> }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,10 +38,10 @@ function MonthSwitcher({ createdAt }: { createdAt?: string }) {
   const now = new Date();
   const currentMonthISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const selectedM = searchParams.get('m') || currentMonthISO;
+  const selectedU = searchParams.get('u');
 
   const months = [];
   const startLimit = createdAt ? new Date(createdAt) : new Date(now.getFullYear(), now.getMonth() - 11, 1);
-  // Normalize startLimit to start of month
   const startMonth = new Date(startLimit.getFullYear(), startLimit.getMonth(), 1);
 
   let d = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -90,40 +50,61 @@ function MonthSwitcher({ createdAt }: { createdAt?: string }) {
     months.push(mStr);
     d.setMonth(d.getMonth() - 1);
   }
-
-  // Fallback: always show at least current month
   if (months.length === 0) months.push(currentMonthISO);
 
-  const handleChange = (val: string) => {
+  const handleMonthChange = (val: string) => {
     const params = new URLSearchParams(Array.from(searchParams.entries()));
     params.set('m', val);
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const handleUserChange = (val: string) => {
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    params.set('u', val);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const selectStyle: React.CSSProperties = {
+    padding: '6px 10px',
+    borderRadius: 10,
+    border: '1px solid var(--border-color)',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    pointerEvents: 'auto',
+    appearance: 'none',
+    WebkitAppearance: 'none'
+  };
+
   return (
-    <select 
-      value={selectedM} 
-      onChange={(e) => handleChange(e.target.value)}
-      style={{
-        padding: '6px 10px',
-        borderRadius: 10,
-        border: '1px solid var(--border-color)',
-        background: 'var(--bg-secondary)',
-        color: 'var(--text-primary)',
-        fontSize: 13,
-        fontWeight: 600,
-        cursor: 'pointer',
-        position: 'relative',
-        zIndex: 10
-      }}
-    >
-      {months.map(m => {
-        const [y, mm] = m.split('-');
-        const date = new Date(parseInt(y), parseInt(mm) - 1);
-        const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        return <option key={m} value={m}>{label}</option>;
-      })}
-    </select>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', pointerEvents: 'auto' }}>
+      <select 
+        value={selectedM} 
+        onChange={(e) => handleMonthChange(e.target.value)}
+        style={selectStyle}
+      >
+        {months.map(m => {
+          const [y, mm] = m.split('-');
+          const date = new Date(parseInt(y), parseInt(mm) - 1);
+          const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          return <option key={m} value={m}>{label}</option>;
+        })}
+      </select>
+      
+      {names && Object.keys(names).length > 0 && (
+        <select 
+          value={selectedU || Object.keys(names)[0]} 
+          onChange={(e) => handleUserChange(e.target.value)}
+          style={{ ...selectStyle, maxWidth: 100 }}
+        >
+          {Object.entries(names).map(([id, name]) => (
+            <option key={id} value={id}>{name as string}</option>
+          ))}
+        </select>
+      )}
+    </div>
   );
 }
 
@@ -246,13 +227,10 @@ export function NavBar() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <ThemeToggle />
-        <Suspense fallback={<div style={{ width: 60, height: 36, background: 'var(--bg-hover)', borderRadius: 10 }} />}>
-          <MonthSwitcher createdAt={household?.created_at} />
-        </Suspense>
-        <Suspense fallback={<div style={{ width: 80, height: 36, background: 'var(--bg-hover)', borderRadius: 10 }} />}>
-          <UserSwitcher />
+        <Suspense fallback={<div style={{ width: 140, height: 36, background: 'var(--bg-hover)', borderRadius: 10 }} />}>
+          <SwitcherGroup createdAt={household?.created_at} names={household?.names} />
         </Suspense>
         {household && <ProfileMenu householdHandle={household.handle || 'Shanbhag-26'} />}
       </div>
