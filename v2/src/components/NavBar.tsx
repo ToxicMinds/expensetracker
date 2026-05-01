@@ -76,7 +76,7 @@ function MonthSwitcher({ createdAt }: { createdAt?: string }) {
   const searchParams = useSearchParams();
   
   const now = new Date();
-  const currentMonthISO = now.toISOString().slice(0, 7);
+  const currentMonthISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const selectedM = searchParams.get('m') || currentMonthISO;
 
   const months = [];
@@ -86,7 +86,8 @@ function MonthSwitcher({ createdAt }: { createdAt?: string }) {
 
   let d = new Date(now.getFullYear(), now.getMonth(), 1);
   while (d >= startMonth) {
-    months.push(d.toISOString().slice(0, 7));
+    const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push(mStr);
     d.setMonth(d.getMonth() - 1);
   }
 

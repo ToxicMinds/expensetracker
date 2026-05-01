@@ -24,7 +24,9 @@ import { MonthlyPerformance } from '@/components/MonthlyPerformance';
 function DashboardContent() {
   const searchParams = useSearchParams();
   const { session, household, loading: hLoading, updateState } = useHousehold();
-  const selectedMonth = searchParams.get('m') || new Date().toISOString().slice(0, 7);
+  const now = new Date();
+  const currentMonthISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const selectedMonth = searchParams.get('m') || currentMonthISO;
   const { expenses, loading: eLoading, softDeleteExpense, saveReceipt, addExpense, updateExpense } = useExpenses(household?.household_id, selectedMonth);
   const [showScanner, setShowScanner] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
@@ -187,6 +189,19 @@ function DashboardContent() {
             <BentoCard colSpan={12} title="Top Items (Deep Analytics)">
               <ItemAnalytics householdId={household.household_id} />
             </BentoCard>
+
+            {displayExpenses.length === 0 && (
+              <BentoCard colSpan={12} title="Timeframe Status">
+                <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>🗓️</div>
+                  <h3 style={{ fontSize: 20, marginBottom: 8 }}>No data for {selectedMonth}</h3>
+                  <p style={{ color: 'var(--text-secondary)', maxWidth: 400, margin: '0 auto' }}>
+                    There are no recorded expenses for this month. 
+                    Scan a receipt or add a manual entry to start tracking your {selectedMonth} spending.
+                  </p>
+                </div>
+              </BentoCard>
+            )}
           </>
         )}
       </div>
