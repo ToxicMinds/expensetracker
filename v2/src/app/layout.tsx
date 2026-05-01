@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/NavBar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { HouseholdProvider } from "@/context/HouseholdContext";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -47,11 +48,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <NavBar />
-        <div className="app-container">
-          {children}
-        </div>
-        <MobileBottomNav />
+        <HouseholdProvider>
+          <NavBar />
+          <div className="app-container">
+            {children}
+          </div>
+          <MobileBottomNav />
+        </HouseholdProvider>
       </body>
     </html>
   );
