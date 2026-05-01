@@ -88,16 +88,17 @@ export function useExpenses(householdId: string | undefined, selectedMonth?: str
     if (!householdId) return;
 
     const normalize = (e: Partial<Expense> & { merchant?: string }) => {
-      const { merchant, ...pureExpense } = e;
+      const { merchant, id, ...pureExpense } = e;
       return {
+        id: id || crypto.randomUUID(),
         ...pureExpense,
         household_id: householdId,
       };
     };
 
     const payload = Array.isArray(expense)
-      ? expense.map(e => ({ id: crypto.randomUUID(), ...normalize(e) }))
-      : { id: crypto.randomUUID(), ...normalize(expense) };
+      ? expense.map(e => normalize(e))
+      : normalize(expense);
 
     const { data, error } = await supabase
       .from('expenses')
