@@ -231,7 +231,7 @@ export function ReceiptScanner({
                     }}
                   >
                     {categories.length > 0 ? (
-                      [...categories, "Add New..."].map(c => <option key={c} value={c}>{c}</option>)
+                      categories.map(c => <option key={c} value={c}>{c}</option>)
                     ) : (
                       <option value={item.category}>{item.category}</option>
                     )}
