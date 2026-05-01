@@ -144,8 +144,50 @@ export function ManualEntryModal({ prefill, household, selectedUser, onSave, onA
               categories={categories}
               selectedCategory={category}
               onSelect={setCategory}
-              onAdd={onAddCategory}
             />
+
+            {/* Quick Add Section - Replicating Scanner's Nice UX */}
+            {onAddCategory && (
+              <div style={{ 
+                marginTop: 8, 
+                padding: '10px 12px', 
+                background: 'var(--bg-hover)', 
+                borderRadius: 12,
+                border: '1px dashed var(--border-color)'
+              }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input 
+                    id="manual-new-cat"
+                    placeholder="New category..."
+                    style={{ 
+                      flex: 1, 
+                      fontSize: 13, 
+                      padding: '6px 10px', 
+                      borderRadius: 8, 
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      outline: 'none'
+                    }}
+                  />
+                  <button 
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ height: 32, minHeight: 32, fontSize: 12, padding: '0 12px' }}
+                    onClick={async () => {
+                      const el = document.getElementById('manual-new-cat') as HTMLInputElement;
+                      if (el && el.value.trim()) {
+                        await onAddCategory(el.value.trim());
+                        setCategory(el.value.trim());
+                        el.value = '';
+                      }
+                    }}
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Person Pills - Fixing attribution speed */}
