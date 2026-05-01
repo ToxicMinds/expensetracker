@@ -41,6 +41,10 @@ export async function POST(req: Request) {
       .eq('id', householdId)
       .single();
 
+    if (!houseData) {
+      return NextResponse.json({ error: 'Household metadata not found' }, { status: 404 });
+    }
+
     const virtualEmail = `h_${houseData.handle}@synculariti.com`;
     const virtualPass = `pin_${pin}_${householdId.substring(0, 8)}`;
 
