@@ -96,8 +96,8 @@ export function useExpenses(householdId: string | undefined, selectedMonth?: str
     };
 
     const payload = Array.isArray(expense)
-      ? expense.map(e => normalize(e))
-      : normalize(expense);
+      ? expense.map(e => ({ id: crypto.randomUUID(), ...normalize(e) }))
+      : { id: crypto.randomUUID(), ...normalize(expense) };
 
     const { data, error } = await supabase
       .from('expenses')
@@ -139,6 +139,7 @@ export function useExpenses(householdId: string | undefined, selectedMonth?: str
     const { data: expenseData, error: expenseError } = await supabase
       .from('expenses')
       .insert({
+        id: crypto.randomUUID(),
         household_id: householdId,
         who_id: whoId,
         who: whoName,
@@ -156,6 +157,7 @@ export function useExpenses(householdId: string | undefined, selectedMonth?: str
     const { error: itemsError } = await supabase
       .from('receipt_items')
       .insert(selectedItems.map(item => ({
+        id: crypto.randomUUID(),
         expense_id: expenseData.id,
         household_id: householdId,
         name: item.name,
