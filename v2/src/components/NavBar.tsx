@@ -40,7 +40,7 @@ function UserSwitcher() {
   const names = household?.names || {};
 
   const handleUserChange = (id: string) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
     params.set('u', id);
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -95,7 +95,7 @@ function MonthSwitcher({ createdAt }: { createdAt?: string }) {
   if (months.length === 0) months.push(currentMonthISO);
 
   const handleChange = (val: string) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
     params.set('m', val);
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -112,7 +112,9 @@ function MonthSwitcher({ createdAt }: { createdAt?: string }) {
         color: 'var(--text-primary)',
         fontSize: 13,
         fontWeight: 600,
-        cursor: 'pointer'
+        cursor: 'pointer',
+        position: 'relative',
+        zIndex: 10
       }}
     >
       {months.map(m => {
