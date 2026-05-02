@@ -3,7 +3,7 @@ import { getNeo4jDriver } from '@/lib/neo4j';
 import { createClient } from '@/lib/supabase-server';
 
 export async function GET() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // 1. Verify Authentication
   const { data: { user }, error: authError } = await supabase.auth.getUser();

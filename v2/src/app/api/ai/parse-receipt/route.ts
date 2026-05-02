@@ -8,7 +8,7 @@ const groq = new Groq({
 import { createClient } from '@/lib/supabase-server';
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // 1. Verify Authentication
   const { data: { user }, error: authError } = await supabase.auth.getUser();
