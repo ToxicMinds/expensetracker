@@ -15,6 +15,7 @@ export interface AppState {
   household_id: string;
   handle: string;
   names: Record<string, string>;
+  emails?: Record<string, string>;
   income: Record<string, number>;
   budgets: Record<string, number>;
   memory: Record<string, string>;
@@ -29,6 +30,7 @@ export function useHousehold() {
   return { 
     session: context.session, 
     household: context.household, 
+    resolvedWhoId: context.resolvedWhoId,
     loading: context.loading, 
     fetchHouseholdState: context.fetchHouseholdState, 
     updateState: context.updateState,

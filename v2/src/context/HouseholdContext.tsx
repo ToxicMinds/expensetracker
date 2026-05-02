@@ -7,6 +7,7 @@ import { AppState } from '@/hooks/useHousehold';
 interface HouseholdContextType {
   session: any;
   household: AppState | null;
+  resolvedWhoId: string | null;
   loading: boolean;
   fetchHouseholdState: () => Promise<void>;
   updateState: (updates: Partial<AppState>) => Promise<void>;
@@ -18,21 +19,23 @@ const HouseholdContext = createContext<HouseholdContextType | undefined>(undefin
 export function HouseholdProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<any>(null);
   const [household, setHousehold] = useState<AppState | null>(null);
+  const [resolvedWhoId, setResolvedWhoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Initialize Session & Auth Listeners
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchHouseholdState();
+      if (session) fetchHouseholdState(session);
       else setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) fetchHouseholdState();
+      if (session) fetchHouseholdState(session);
       else {
         setHousehold(null);
+        setResolvedWhoId(null);
         setLoading(false);
       }
     });
@@ -44,8 +47,11 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
    * PERFORMANCE FIX: Using the bundled RPC
    * Reduces network traffic by 66% per instance.
    */
-  const fetchHouseholdState = async () => {
+  const fetchHouseholdState = async (currentSession?: any) => {
     try {
+      const activeSession = currentSession || session;
+      if (!activeSession) return;
+
       // Single network round-trip instead of 3 sequential awaits
       const { data: bundle, error } = await supabase.rpc('get_household_bundle');
       
@@ -58,6 +64,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
         household_id: metadata.household_id,
         handle: metadata.handle || '',
         names: config.names || {},
+        emails: config.emails || {},
         income: config.income || {},
         budgets: config.budgets || {},
         memory: config.memory || {},
@@ -65,6 +72,15 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
         ai_insight: config.ai_insight,
         created_at: metadata.created_at
       });
+
+      // Identity Resolution: Map email to who_id
+      const email = activeSession.user?.email;
+      if (email && config.emails) {
+        const foundId = Object.keys(config.emails).find(
+          key => config.emails[key]?.toLowerCase() === email.toLowerCase()
+        );
+        if (foundId) setResolvedWhoId(foundId);
+      }
     } catch (e) {
       console.error('Error fetching household state:', e);
     } finally {
@@ -115,6 +131,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     <HouseholdContext.Provider value={{ 
       session, 
       household, 
+      resolvedWhoId,
       loading, 
       fetchHouseholdState, 
       updateState,
