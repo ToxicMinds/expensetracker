@@ -30,16 +30,20 @@ export function AIInsights({
   useEffect(() => {
     if (!householdId || !household || !cacheHash) return;
 
-    // 1. Serve from Supabase-backed cache if hash matches — no API call needed
-    if (household?.config?.ai_insight?.hash === cacheHash) {
-      setInsight(household.config.ai_insight.insight);
+    // 1. Serve from Supabase-backed cache if valid AND < 24h old
+    const cached = household?.ai_insight;
+    const isHashMatch = cached?.hash === cacheHash;
+    const isFresh = cached?.timestamp && (Date.now() - new Date(cached.timestamp).getTime() < 24 * 60 * 60 * 1000);
+
+    if (isHashMatch && isFresh && cached?.insight) {
+      setInsight(cached.insight);
       setSource('cache');
       setLoading(false);
       lastFetchedHash.current = cacheHash;
       return;
     }
 
-    // 2. Don't re-fetch if we already fetched this exact hash
+    // 2. Don't re-fetch if we already tried this exact hash in this session
     if (lastFetchedHash.current === cacheHash) return;
 
     // 3. Don't fire concurrent fetches
@@ -65,9 +69,16 @@ export function AIInsights({
         setInsight(data.insight);
         setSource('live');
         lastFetchedHash.current = cacheHash;
-        // Persist to Supabase so other devices get it from cache
+        
+        // Persist to Supabase with timestamp so other devices get it from cache
         if (updateState && cacheHash) {
-          updateState({ ai_insight: { insight: data.insight, hash: cacheHash } }).catch(() => {});
+          updateState({ 
+            ai_insight: { 
+              insight: data.insight, 
+              hash: cacheHash,
+              timestamp: new Date().toISOString()
+            } 
+          }).catch(() => {});
         }
       } else {
         // API returned 200 but no meaningful insight — show a soft message, don't retry

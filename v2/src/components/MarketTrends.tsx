@@ -25,7 +25,7 @@ ChartJS.register(
   Filler
 );
 
-export function MarketTrends({ expenses, selectedMonth }: { expenses: any[], selectedMonth: string }) {
+export function MarketTrends({ expenses, selectedMonth, colSpan = 8 }: { expenses: any[], selectedMonth: string, colSpan?: number }) {
   // Logic: Group expenses by month for the last 6 months
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const [y, m] = selectedMonth.split('-');
@@ -77,7 +77,7 @@ export function MarketTrends({ expenses, selectedMonth }: { expenses: any[], sel
   };
 
   return (
-    <BentoCard title="6-Month Habit Tracker" colSpan={8}>
+    <BentoCard title="6-Month Habit Tracker" colSpan={colSpan}>
       <div style={{ height: 200, width: '100%' }}>
         <Line data={data} options={options} />
       </div>

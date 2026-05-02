@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BentoCard } from './BentoCard';
 
-export function BudgetHealth({ spent, totalBudget }: { spent: number, totalBudget: number }) {
+export function BudgetHealth({ spent, totalBudget, colSpan = 4 }: { spent: number, totalBudget: number, colSpan?: number }) {
   const [forecast, setForecast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +40,7 @@ export function BudgetHealth({ spent, totalBudget }: { spent: number, totalBudge
   const isOver = remaining < 0;
 
   return (
-    <BentoCard title="Budget Health" colSpan={4}>
+    <BentoCard title="Budget Health" colSpan={colSpan}>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ fontSize: 32, fontWeight: 600, color: isOver ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
           €{remaining.toFixed(2)}

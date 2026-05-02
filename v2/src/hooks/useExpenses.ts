@@ -131,47 +131,67 @@ export function useExpenses(householdId: string | undefined, selectedMonth?: str
       throw new Error('No items selected to save.');
     }
 
-    // Determine the primary category (most frequent among selected items)
+    // Determine the primary category
     const catCounts: Record<string, number> = {};
     selectedItems.forEach(i => catCounts[i.category] = (catCounts[i.category] || 0) + 1);
     const primaryCategory = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0][0];
 
-    // 1. Insert the parent Expense
-    const { data: expenseData, error: expenseError } = await supabase
-      .from('expenses')
-      .insert({
-        id: crypto.randomUUID(),
-        household_id: householdId,
-        who_id: whoId,
-        who: whoName,
-        category: primaryCategory,
-        amount: selectedItems.reduce((acc, curr) => acc + curr.amount, 0),
-        date: receipt.date,
-        description: receipt.store,
-      })
-      .select()
-      .single();
+    const expenseId = crypto.randomUUID();
+    const totalAmount = selectedItems.reduce((acc, curr) => acc + curr.amount, 0);
 
-    if (expenseError) throw expenseError;
+    const expensePayload = {
+      id: expenseId,
+      household_id: householdId,
+      who_id: whoId,
+      who: whoName,
+      category: primaryCategory,
+      amount: totalAmount,
+      date: receipt.date,
+      description: receipt.store,
+    };
 
-    // 2. Insert the Receipt Items
-    const { error: itemsError } = await supabase
-      .from('receipt_items')
-      .insert(selectedItems.map(item => ({
-        id: crypto.randomUUID(),
-        expense_id: expenseData.id,
-        household_id: householdId,
-        name: item.name,
-        amount: item.amount,
-        category: item.category
-      })));
+    const itemsPayload = selectedItems.map(item => ({
+      id: crypto.randomUUID(),
+      name: item.name,
+      amount: item.amount,
+      category: item.category
+    }));
 
-    if (itemsError) throw itemsError;
+    // Exponential Backoff Retry Logic
+    let attempt = 0;
+    const maxAttempts = 3;
+    let lastError: any = null;
 
-    // 3. Neo4j Normalization (Fire and forget to keep UI snappy)
-    normalizeAndLinkMerchant(receipt.store, expenseData.id, expenseData.amount).catch(err => 
-      console.error('Neo4j Sync Failed:', err)
-    );
+    while (attempt < maxAttempts) {
+      try {
+        const { data, error } = await supabase.rpc('save_receipt_v2', {
+          p_expense: expensePayload,
+          p_items: itemsPayload
+        });
+
+        if (error) throw error;
+
+        // Success! Proactively refresh the UI
+        fetchExpenses();
+
+        // Fire-and-forget Neo4j sync
+        normalizeAndLinkMerchant(receipt.store, expenseId, totalAmount).catch(err => 
+          console.error('Neo4j Sync Failed:', err)
+        );
+
+        return data;
+      } catch (err) {
+        lastError = err;
+        attempt++;
+        if (attempt < maxAttempts) {
+          const delay = Math.pow(2, attempt) * 1000; // 2s, 4s
+          console.warn(`saveReceipt failed (attempt ${attempt}/${maxAttempts}). Retrying in ${delay}ms...`, err);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    throw lastError;
   };
 
   const softDeleteExpense = async (id: string) => {

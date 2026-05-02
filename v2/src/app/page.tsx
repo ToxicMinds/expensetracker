@@ -135,7 +135,22 @@ function DashboardContent() {
           </div>
         ) : (
           <>
-            {/* ROW 1: Brains + Command */}
+            {/* ROW 1: STATUS (Habit First) */}
+            <MonthlyPerformance expenses={expenses} selectedMonth={selectedMonth} colSpan={8} />
+            <WealthBuilder income={totalIncome} spent={totals.spent} goal={monthlySavingsGoal} />
+
+            {/* ROW 2: FAMILY & BUDGET */}
+            <FamilySpends expenses={displayExpenses} names={household.names} colSpan={6} />
+            <BudgetHealth spent={totals.spent} totalBudget={totalBudget} colSpan={6} />
+
+            {/* ROW 3: ACTION */}
+            <CommandCenter
+              onScan={() => setShowScanner(true)}
+              onManual={(prefill) => setManualEntry({ ...prefill, who_id: selectedUser })}
+              onStatement={() => setShowStatement(true)}
+            />
+
+            {/* ROW 4: INTELLIGENCE */}
             <AIInsights 
               householdId={household.household_id} 
               expenseCount={expenses.length} 
@@ -143,19 +158,8 @@ function DashboardContent() {
               updateState={updateState} 
               household={household} 
             />
-            <CommandCenter
-              onScan={() => setShowScanner(true)}
-              onManual={(prefill) => setManualEntry({ ...prefill, who_id: selectedUser })}
-              onStatement={() => setShowStatement(true)}
-            />
 
-            {/* ROW 2: Financial Foundation */}
-            <WealthBuilder income={totalIncome} spent={totals.spent} goal={monthlySavingsGoal} />
-            <MonthlyPerformance expenses={expenses} selectedMonth={selectedMonth} />
-            <BudgetHealth spent={totals.spent} totalBudget={totalBudget} />
-            <FamilySpends expenses={displayExpenses} names={household.names} />
-
-            {/* ROW 3: Trends & Overview */}
+            {/* ROW 5: TRENDS & CONTEXT */}
             <BentoCard
               colSpan={4}
               title={`Total Spent (${selectedMonth})`}
@@ -172,9 +176,9 @@ function DashboardContent() {
               <div style={{ marginTop: 20 }}><DailyTrend expenses={displayExpenses} /></div>
             </BentoCard>
 
-            <MarketTrends expenses={expenses} selectedMonth={selectedMonth} />
+            <MarketTrends expenses={expenses} selectedMonth={selectedMonth} colSpan={8} />
 
-            {/* ROW 4: Expense List + Categories */}
+            {/* ROW 6: LIST & BREAKDOWN */}
             <BentoCard colSpan={8} rowSpan={2} title="All Expenses">
               <div className="scroll-area" style={{ maxHeight: 560 }}>
                 <ExpenseList 
@@ -189,7 +193,7 @@ function DashboardContent() {
               <SpendingBreakdown expenses={displayExpenses} />
             </BentoCard>
 
-            {/* ROW 5: Deep Analytics */}
+            {/* ROW 7: DEEP ANALYTICS */}
             <BentoCard colSpan={12} title="Top Items (Deep Analytics)">
               <ItemAnalytics householdId={household.household_id} />
             </BentoCard>

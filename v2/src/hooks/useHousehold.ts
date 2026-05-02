@@ -20,7 +20,7 @@ export interface AppState {
   budgets: Record<string, number>;
   memory: Record<string, string>;
   goals: Record<string, any>;
-  ai_insight?: { insight: string; hash: string };
+  ai_insight?: { insight: string; hash: string; timestamp: string };
   created_at?: string;
 }
 

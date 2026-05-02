@@ -3,7 +3,7 @@
 import { BentoCard } from './BentoCard';
 import { calcPerUserSpend } from '@/lib/finance';
 
-export function FamilySpends({ expenses, names }: { expenses: any[], names: Record<string, string> }) {
+export function FamilySpends({ expenses, names, colSpan = 4 }: { expenses: any[], names: Record<string, string>, colSpan?: number }) {
   // FIXED: Use the proper hybrid resolver that handles BOTH who_id AND legacy who-name
   const userSpends = calcPerUserSpend(expenses, names);
 
@@ -19,7 +19,7 @@ export function FamilySpends({ expenses, names }: { expenses: any[], names: Reco
   const champion = activeUsers.length > 1 ? activeUsers[activeUsers.length - 1] : null;
 
   return (
-    <BentoCard title="Family Spends" colSpan={4}>
+    <BentoCard title="Family Spends" colSpan={colSpan}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {sortedUsers.map((user) => (
           <div key={user.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

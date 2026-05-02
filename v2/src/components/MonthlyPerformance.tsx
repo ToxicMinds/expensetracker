@@ -5,10 +5,12 @@ import { Expense } from '@/lib/finance';
 
 export function MonthlyPerformance({ 
   expenses, 
-  selectedMonth 
+  selectedMonth,
+  colSpan = 4
 }: { 
   expenses: Expense[], 
-  selectedMonth: string 
+  selectedMonth: string,
+  colSpan?: number
 }) {
   const [y, m] = selectedMonth.split('-');
   const currentPrefix = `${y}-${m}`;
@@ -51,7 +53,7 @@ export function MonthlyPerformance({
   });
 
   return (
-    <BentoCard title="Monthly Performance" colSpan={4}>
+    <BentoCard title="Monthly Performance" colSpan={colSpan}>
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Spent this month</p>
         <div style={{ fontSize: 32, fontWeight: 700 }}>€{currentTotal.toFixed(2)}</div>
