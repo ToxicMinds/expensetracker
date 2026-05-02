@@ -45,7 +45,17 @@ AI Insights (Groq) are shared across the household to minimize cost and latency.
     *   *Issue*: Components import the Supabase client directly.
     *   *Next Step*: Create a Repository Layer to isolate third-party SDKs.
 4.  **Least Privilege**:
-    *   *Issue*: RLS policies need a final audit to ensure `receipt_items` are strictly partitioned by `household_id`.
+    *   *Status*: **HARDENED**. RLS is enforced on all tables.
+    *   *Logic*: Uses the `get_my_household()` server-side helper to isolate rows by `household_id`.
+    *   *Rule*: NEVER query `receipt_items` or `expenses` without a `household_id` filter in the code, even though RLS will block it. Double-layer defense is mandatory.
+
+---
+
+## 4. Tenant Separation Logic (Cross-Device Security)
+To ensure absolute isolation between households:
+1.  **JWT Claims**: Every request to Supabase must include the user's JWT.
+2.  **Server-Side Resolution**: The database uses `auth.uid()` to look up the `household_id` in `app_users`.
+3.  **No Global Reads**: Tables like `receipt_items` are protected by RLS policies that prevent reading any line items not belonging to the user's resolved household.
 
 ---
 
