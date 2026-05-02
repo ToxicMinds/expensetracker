@@ -1,13 +1,11 @@
 {
-  "name": "expense-tracker",
-  "version": "1.0.0",
-  "description": "Expense Tracker",
-  "main": "js/app.js",
+  "name": "expensetracker-monorepo",
+  "version": "2.0.0",
+  "private": true,
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles"
-  },
-  "dependencies": {},
-  "devDependencies": {
-    "jest": "^29.7.0"
+    "dev": "npm run dev --prefix v2",
+    "build": "npm run build --prefix v2",
+    "start": "npm run start --prefix v2",
+    "test": "npm test --prefix v2"
   }
 }
