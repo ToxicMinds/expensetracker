@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { DEFAULT_CATEGORIES } from '@/lib/constants';
 
 interface CategorySelectorProps {

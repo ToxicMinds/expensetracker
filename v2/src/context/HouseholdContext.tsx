@@ -122,12 +122,23 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   };
 
   const addCategory = async (name: string) => {
-    if (!household?.budgets) return;
+    if (!household) return;
     const cleanName = name.trim();
-    if (!cleanName || household.budgets[cleanName] !== undefined) return;
+    if (!cleanName) return;
     
-    const newBudgets = { ...household.budgets, [cleanName]: 0 };
-    await updateState({ budgets: newBudgets });
+    const existingBudgets = household.budgets || {};
+    const existingCategories = household.categories || [];
+    
+    // Skip if already exists
+    if (existingCategories.includes(cleanName)) return;
+    
+    const newBudgets = { ...existingBudgets, [cleanName]: existingBudgets[cleanName] || 0 };
+    const newCategories = [...existingCategories, cleanName];
+    
+    await updateState({ 
+      budgets: newBudgets,
+      categories: newCategories
+    });
   };
 
   return (

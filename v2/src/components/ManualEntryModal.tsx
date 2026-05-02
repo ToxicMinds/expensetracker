@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { labelStyle, inputStyle } from './formStyles';
 import { Expense } from '@/lib/finance';
 import { CategorySelector } from './CategorySelector';
@@ -138,7 +138,7 @@ export function ManualEntryModal({ prefill, household, selectedUser, onSave, onA
               style={{ ...inputStyle, marginBottom: 8 }}
             >
               <option value="" disabled>Select category...</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c: string) => <option key={c} value={c}>{c}</option>)}
             </select>
             <CategorySelector 
               categories={categories}
@@ -194,7 +194,7 @@ export function ManualEntryModal({ prefill, household, selectedUser, onSave, onA
           <div>
             <label style={labelStyle}>Who is this for?</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-              {nameEntries.map(([id, name]) => (
+              {nameEntries.map(([id, name]: [string, any]) => (
                 <button
                   key={id}
                   type="button"

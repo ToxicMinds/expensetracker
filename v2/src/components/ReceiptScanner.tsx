@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { BentoCard } from './BentoCard';
 import { CategorySelector } from './CategorySelector';
@@ -233,7 +233,7 @@ export function ReceiptScanner({
                     }}
                   >
                     {categories.length > 0 ? (
-                      categories.map(c => <option key={c} value={c}>{c}</option>)
+                      categories.map((c: string) => <option key={c} value={c}>{c}</option>)
                     ) : (
                       <option value={item.category}>{item.category}</option>
                     )}
