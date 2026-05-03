@@ -140,22 +140,20 @@ function DashboardContent() {
           </div>
         ) : (
           <>
-            {/* ROW 1: STATUS (Habit First) */}
+            {/* ROW 1: ACTION & PERFORMANCE */}
             <MonthlyPerformance expenses={expenses} selectedMonth={selectedMonth} colSpan={8} />
-            <WealthBuilder income={totalIncome} spent={totals.spent} goal={monthlySavingsGoal} />
-
-            {/* ROW 2: FAMILY & BUDGET */}
-            <FamilySpends expenses={displayExpenses} names={household.names} colSpan={6} />
-            <BudgetHealth spent={totals.spent} totalBudget={totalBudget} colSpan={6} />
-
-            {/* ROW 3: ACTION */}
             <CommandCenter
               onScan={() => setShowScanner(true)}
               onManual={(prefill) => setManualEntry({ ...prefill, who_id: selectedUser })}
               onStatement={() => setShowStatement(true)}
             />
 
-            {/* ROW 4: INTELLIGENCE */}
+            {/* ROW 2: FAMILY & BUDGET */}
+            <FamilySpends expenses={displayExpenses} names={household.names} colSpan={6} />
+            <BudgetHealth spent={totals.spent} totalBudget={totalBudget} colSpan={6} />
+
+            {/* ROW 3: STATUS & INTELLIGENCE */}
+            <WealthBuilder income={totalIncome} spent={totals.spent} goal={monthlySavingsGoal} />
             <AIInsights 
               householdId={household.household_id} 
               expenseCount={expenses.length} 
