@@ -26,21 +26,28 @@ export async function POST(req: Request) {
     // 1. EXTRACT GROUND TRUTH FROM EKASA JSON (DO NOT LET AI TOUCH FINANCIALS)
     const receipt = ekasaData.receipt || ekasaData.data || ekasaData;
     
-    const cleanStoreName = (name: string) => {
-      if (!name || name === 'Slovak Receipt') return name;
+    // Deep extraction for Store Name
+    const rawStore = 
+      receipt.organization?.name || 
+      receipt.seller?.name || 
+      receipt.organizationName || 
+      receipt.merchantName || 
+      receipt.name || 
+      ekasaData.organization?.name || 
+      ekasaData.organizationName || 
+      null;
+
+    const dic = receipt.organization?.dic || receipt.dic || ekasaData.dic || null;
+
+    const cleanStoreName = (name: string | null) => {
+      if (!name || name === 'Slovak Receipt') return 'Slovak Receipt';
       return name
         .replace(/,?\s*(s\.r\.o\.|v\.o\.s\.|a\.s\.|k\.s\.|o\.z\.)/gi, '')
         .replace(/Slovenská republika/gi, '')
         .trim();
     };
 
-    const store = cleanStoreName(
-      receipt.organizationName || 
-      receipt.merchantName || 
-      receipt.name || 
-      ekasaData.organizationName || 
-      'Slovak Receipt'
-    );
+    let store = cleanStoreName(rawStore);
     
     // Improved Date Extraction
     let date = null;
@@ -69,15 +76,15 @@ export async function POST(req: Request) {
     // 2. ASK AI FOR CATEGORIZATION AND STORE INFERENCE (IF NEEDED)
     const needsStoreInference = store === 'Slovak Receipt';
     const systemPrompt = `
-      You are a specialized financial analyst.
-      I will provide a list of items from a Slovak receipt.
-      ${needsStoreInference ? 'EXTRACT THE STORE NAME from these items (e.g., Lidl, Tesco, Billa, Shell, Pharmacy).' : ''}
+      You are a specialized financial analyst for the Slovak market.
+      I will provide a list of items from a receipt.
+      ${needsStoreInference ? 'IDENTIFY THE SPECIFIC STORE BRAND from these items. Look for store-brand products or item names to "fingerprint" the retailer (e.g., "Dr.Max" instead of just "Pharmacy", "Lidl" instead of "Groceries").' : ''}
       Normalize item names (e.g., "Kup. sunka 100g" -> "Šunka").
       Assign a CATEGORY from this list: ${categories?.join(', ') || 'Groceries, Dining Out, Transport, Other'}.
       
       RETURN JSON:
       {
-        ${needsStoreInference ? '"inferredStore": "Store Name",' : ''}
+        ${needsStoreInference ? '"inferredStore": "Specific Brand Name",' : ''}
         "items": [
           { "name": "Normalized Name", "category": "Category" }
         ]
@@ -103,6 +110,16 @@ export async function POST(req: Request) {
     const finalStore = (needsStoreInference && aiParsed.inferredStore) 
       ? cleanStoreName(aiParsed.inferredStore) 
       : store;
+
+    // Log for auditing (The "Black Site" Standard)
+    const { Logger } = await import('@/lib/logger');
+    Logger.system('INFO', 'AI', 'Merchant Extraction Detail', {
+      dic,
+      rawStore,
+      inferredStore: aiParsed.inferredStore,
+      finalStore,
+      itemCount: items.length
+    });
 
     // 3. MERGE AI CATEGORIES WITH ORIGINAL PRICES (GROUND TRUTH)
     const mergedItems = items.map((orig: any, idx: number) => ({
