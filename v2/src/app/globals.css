@@ -63,8 +63,7 @@ html {
   /* Prevent text size inflation on iOS rotation */
   -webkit-text-size-adjust: 100%;
   /* Critical: prevent horizontal overflow globally */
-  overflow: hidden;
-  height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -79,8 +78,6 @@ body {
   /* Prevent any child from causing horizontal scroll */
   overflow-x: hidden;
   max-width: 100vw;
-  /* MOBILE SNAPPINESS: Remove 300ms tap delay */
-  touch-action: manipulation;
 }
 
 /* ============================================
