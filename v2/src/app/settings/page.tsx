@@ -94,42 +94,77 @@ export default function SettingsPage() {
         </BentoCard>
 
         {/* Member Management */}
-        <BentoCard colSpan={12} title="Member Management">
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-            Map each member to their **Google Email** for automatic login resolution. IDs (u1, u2) remain permanent.
+        <BentoCard colSpan={12} title="Family Members">
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            Link family members to their Google accounts for instant access.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 4px', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', width: 40 }}>ID</span>
-              <span style={{ flex: 1, fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>DISPLAY NAME</span>
-              <span style={{ flex: 1.5, fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>GOOGLE EMAIL (FOR AUTO-LOGIN)</span>
-            </div>
-            {Object.entries(names).map(([id, name]) => (
-              <div key={id} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', width: 40, textAlign: 'center' }}>{id}</span>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => updateMemberName(id, e.target.value)}
-                  placeholder="e.g. Nikhil"
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', fontSize: 14 }}
-                />
-                <input 
-                  type="email" 
-                  value={emails[id] || ''} 
-                  onChange={(e) => updateMemberEmail(id, e.target.value)}
-                  placeholder="e.g. name@gmail.com"
-                  style={{ flex: 1.5, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', fontSize: 14 }}
-                />
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {Object.entries(names).map(([id, name], index) => (
+              <div 
+                key={id} 
+                style={{ 
+                  display: 'flex', 
+                  gap: 16, 
+                  alignItems: 'center', 
+                  padding: '16px', 
+                  borderRadius: 12, 
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid var(--border-color)'
+                }}
+              >
+                {/* Human ID Circle */}
+                <div style={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: '50%', 
+                  background: 'var(--bg-secondary)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  flexShrink: 0
+                }}>
+                  {id.replace('u', '')}
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                    <div style={{ flex: '1 1 200px' }}>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4, letterSpacing: '0.05em' }}>Display Name</label>
+                      <input 
+                        type="text" 
+                        value={name} 
+                        onChange={(e) => updateMemberName(id, e.target.value)}
+                        placeholder="e.g. Nikhil"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', fontSize: 14 }}
+                      />
+                    </div>
+                    <div style={{ flex: '1.5 1 240px' }}>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4, letterSpacing: '0.05em' }}>Google Email</label>
+                      <input 
+                        type="email" 
+                        value={emails[id] || ''} 
+                        onChange={(e) => updateMemberEmail(id, e.target.value)}
+                        placeholder="name@gmail.com"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', fontSize: 14 }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
+
           <button 
             onClick={addMember} 
             className="btn btn-secondary" 
-            style={{ marginTop: 20, padding: '10px', fontSize: 13, borderStyle: 'dashed' }}
+            style={{ marginTop: 20, width: '100%', padding: '12px', fontSize: 13, borderStyle: 'dashed' }}
           >
-            + Add New Member
+            + Add Another Member
           </button>
         </BentoCard>
 
