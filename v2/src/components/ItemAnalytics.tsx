@@ -8,6 +8,8 @@ interface AggregatedItem {
   name: string;
   total_amount: number;
   count: number;
+  last_store: string;
+  last_date: string;
 }
 
 export function ItemAnalytics({ householdId }: { householdId: string | undefined }) {
@@ -23,22 +25,45 @@ export function ItemAnalytics({ householdId }: { householdId: string | undefined
   async function fetchTopItems() {
     setLoading(true);
     try {
-      // Fetch and aggregate items manually (since Supabase RLS is enabled)
       const { data, error } = await supabase
         .from('receipt_items')
-        .select('name, amount')
+        .select(`
+          name, 
+          amount, 
+          expense_id,
+          expenses (
+            description,
+            date
+          )
+        `)
         .eq('household_id', householdId);
 
       if (error) throw error;
 
-      // Group and aggregate
-      const aggregated = (data || []).reduce((acc: Record<string, AggregatedItem>, curr) => {
-        const name = curr.name.trim().toUpperCase();
-        if (!acc[name]) {
-          acc[name] = { name: curr.name, total_amount: 0, count: 0 };
+      const aggregated = (data || []).reduce((acc: Record<string, AggregatedItem>, curr: any) => {
+        const rawName = curr.name || 'Unknown Item';
+        const nameKey = rawName.trim().toUpperCase();
+        const parent = curr.expenses;
+        
+        if (!acc[nameKey]) {
+          acc[nameKey] = { 
+            name: rawName, 
+            total_amount: 0, 
+            count: 0, 
+            last_store: parent?.description || 'Unknown', 
+            last_date: parent?.date || '' 
+          };
         }
-        acc[name].total_amount += Number(curr.amount);
-        acc[name].count += 1;
+
+        acc[nameKey].total_amount += Number(curr.amount);
+        acc[nameKey].count += 1;
+
+        // Track latest context
+        if (parent?.date && (!acc[nameKey].last_date || parent.date > acc[nameKey].last_date)) {
+          acc[nameKey].last_date = parent.date;
+          acc[nameKey].last_store = parent.description;
+        }
+
         return acc;
       }, {});
 
@@ -65,14 +90,21 @@ export function ItemAnalytics({ householdId }: { householdId: string | undefined
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {items.map((item, i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 14, fontWeight: 500 }}>{item.name}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{item.count} purchases</span>
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</span>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                {item.last_store} • {new Date(item.last_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              </span>
+              <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.05)', padding: '1px 6px', borderRadius: 4, color: 'var(--text-muted)' }}>
+                {item.count}x
+              </span>
+            </div>
           </div>
-          <span style={{ fontWeight: 600 }}>€{item.total_amount.toFixed(2)}</span>
+          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>€{item.total_amount.toFixed(2)}</span>
         </div>
       ))}
     </div>
