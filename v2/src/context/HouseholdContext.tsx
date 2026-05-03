@@ -10,6 +10,8 @@ interface HouseholdContextType {
   household: AppState | null;
   resolvedWhoId: string | null;
   loading: boolean;
+  syncToken: number;
+  triggerRefresh: () => void;
   fetchHouseholdState: () => Promise<void>;
   updateState: (updates: Partial<AppState>) => Promise<void>;
   addCategory: (name: string) => Promise<void>;
@@ -22,6 +24,9 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   const [household, setHousehold] = useState<AppState | null>(null);
   const [resolvedWhoId, setResolvedWhoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncToken, setSyncToken] = useState(0);
+
+  const triggerRefresh = () => setSyncToken(prev => prev + 1);
 
   // Initialize Session & Auth Listeners
   useEffect(() => {
@@ -153,6 +158,8 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       household, 
       resolvedWhoId,
       loading, 
+      syncToken,
+      triggerRefresh,
       fetchHouseholdState, 
       updateState,
       addCategory

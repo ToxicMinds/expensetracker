@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { Expense } from '@/lib/finance';
 import { normalizeAndLinkMerchant } from '@/lib/neo4j';
 import { Logger } from '@/lib/logger';
+import { useHouseholdContext } from '@/context/HouseholdContext';
 
 export interface ReceiptItem {
   name: string;
@@ -22,6 +23,7 @@ export interface ReceiptData {
  * RESPONSIBILITY: Write operations, ACID Transactions, and Intelligence Linking.
  */
 export function useSync(householdId: string | undefined) {
+  const { triggerRefresh } = useHouseholdContext();
   
   const addExpense = async (expense: Partial<Expense> | Partial<Expense>[]) => {
     if (!householdId) return;
@@ -49,11 +51,12 @@ export function useSync(householdId: string | undefined) {
       throw error;
     }
 
-    // Success activity
+    // Success activity & Signal
     const count = Array.isArray(payload) ? payload.length : 1;
     Logger.user(householdId, 'EXPENSE_ADDED', `Added ${count} manual expense(s)`, 'Household Member');
+    triggerRefresh();
 
-    // Fire-and-forget Neo4j sync (Handled in background)
+    // Fire-and-forget Neo4j sync
     if (data) {
       for (const saved of data) {
         const merchantName = (expense as any).merchant || saved.description || 'Unknown Merchant';
@@ -70,7 +73,6 @@ export function useSync(householdId: string | undefined) {
     const selectedItems = receipt.items.filter(i => i.selected);
     if (selectedItems.length === 0) throw new Error('No items selected');
 
-    // Calculate primary category (most items)
     const catCounts: Record<string, number> = {};
     selectedItems.forEach(i => catCounts[i.category] = (catCounts[i.category] || 0) + 1);
     const primaryCategory = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0][0];
@@ -96,7 +98,6 @@ export function useSync(householdId: string | undefined) {
       category: item.category
     }));
 
-    // Exponential Backoff Retry Logic (ACID Resilience)
     let attempt = 0;
     const maxAttempts = 3;
     let lastError: any = null;
@@ -110,10 +111,10 @@ export function useSync(householdId: string | undefined) {
 
         if (error) throw error;
 
-        // Success activity
+        // Success activity & Signal
         Logger.user(householdId, 'EXPENSE_ADDED', `Scanned receipt from ${receipt.store} (€${totalAmount.toFixed(2)})`, whoName);
+        triggerRefresh();
 
-        // Fire-and-forget Neo4j sync
         normalizeAndLinkMerchant(receipt.store, expenseId, totalAmount).catch(err => 
           console.error('Neo4j Sync Failed:', err)
         );
@@ -142,7 +143,11 @@ export function useSync(householdId: string | undefined) {
       .update({ is_deleted: true })
       .eq('id', id)
       .eq('household_id', householdId);
+
     if (error) throw error;
+
+    Logger.user(householdId, 'EXPENSE_DELETED', `Removed an expense record`, 'Household Member');
+    triggerRefresh();
   };
 
   const updateExpense = async (id: string, expense: Partial<Expense> & { merchant?: string }) => {
@@ -156,6 +161,9 @@ export function useSync(householdId: string | undefined) {
       .eq('id', id);
 
     if (error) throw error;
+
+    Logger.user(householdId, 'EXPENSE_UPDATED', `Updated details for ${expense.description || 'an expense'}`, 'Household Member');
+    triggerRefresh();
 
     const merchantName = expense.merchant || expense.description || 'Unknown Merchant';
     normalizeAndLinkMerchant(merchantName, id, Number(expense.amount)).catch(err => 

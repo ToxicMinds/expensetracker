@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Expense } from '@/lib/finance';
+import { useHouseholdContext } from '@/context/HouseholdContext';
 
 /**
  * useTransactions Hook (SOLID: Single Responsibility)
@@ -9,6 +10,8 @@ import { Expense } from '@/lib/finance';
 export function useTransactions(householdId: string | undefined, selectedMonth?: string) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { syncToken } = useHouseholdContext();
 
   useEffect(() => {
     if (!householdId) {
@@ -34,7 +37,7 @@ export function useTransactions(householdId: string | undefined, selectedMonth?:
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [householdId, selectedMonth]);
+  }, [householdId, selectedMonth, syncToken]);
 
   const fetchExpenses = async () => {
     if (!householdId) return;
